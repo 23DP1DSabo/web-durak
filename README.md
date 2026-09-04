@@ -19,14 +19,14 @@ webDurak ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts s
 - Agile + Scrum.
 
 # Izmantotās iekšējās tehnoloģijas
-- React
-- Typescript
-- Vite
+- React;
+- Typescript;
+- Vite;
 - MySQL datubāze;
 - node.js;
-- Express
+- Express;
 - Axios;
 - Socket.IO
 - Prisma ORM;
 - Railway hosting;
-- Vitest
+- Vitest.
