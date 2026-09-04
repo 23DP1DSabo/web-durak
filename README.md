@@ -1,5 +1,5 @@
 # web-durak
-## Kurss: DP4-1;
+## Kurss: DP4-1
 ## Dalībnieki
 - Daniels Šabovičs ();
 - Lukass Vidriks (); 
