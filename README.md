@@ -1,8 +1,8 @@
 # web-durak
 ## Kurss: DP4-1
 ## Dalībnieki
-- Daniels Šabovičs ();
-- Lukass Vidriks (); 
+- Daniels Šabovičs (izstrādātājs, frontend, spēles loģika);
+- Lukass Vidriks (izstrādātājs, backend, datubāze); 
 
 # Projekta apraksts
 webDurak ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts sastāv no 4 lapām: sākumlapa, reģistrācijas lapa, profila lapa, spēles galda lapa. Ir iespēja spēlēt ar anonīmiem lietotājiem kā viesis un ar draugiem pieslēdzoties vietnei.
