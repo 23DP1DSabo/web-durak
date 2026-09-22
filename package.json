@@ -1,0 +1,22 @@
+{
+  "name": "web-durak",
+  "version": "1.0.0",
+  "description": "- Daniels Šabovičs (izstrādātājs, frontend, spēles loģika, testētājs);\r - Lukass Vidriks (izstrādātājs, backend, datubāze);\r - Anna Laima Orbidāne (izstrādātāja, backend, frontend).",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/23DP1DSabo/web-durak.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/23DP1DSabo/web-durak/issues"
+  },
+  "homepage": "https://github.com/23DP1DSabo/web-durak#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
