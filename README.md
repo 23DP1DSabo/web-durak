@@ -30,3 +30,7 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts 
 - Railway hosting – pakalpojums projekta pārnešanai uz ārējo serveri, kas izvēlēts pēc iesācējiem draudzīgas reputācijas; 
 - Zod – Typescript bibliotēka paredzēta datu validācijai un integritātes uzturēšanai;
 - Vitest – programmas testēšanas rīks.
+# Izmantotās ārējās tehnoloģijas
+- GitHub - versiju kontroles sistēma; 
+- VScode - kodēšanas vide;
+- Trello - kanban metodes darba plānotājs.
