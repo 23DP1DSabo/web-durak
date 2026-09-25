@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 .vite/
 
 /generated/prisma
+
+# Vitest reports and artifacts
+.vitest/
