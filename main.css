@@ -1,89 +1,182 @@
 #frontpage-content {
-    --ink: #331b0c;
-    --felt: #e6eee7;
-    --paper: #f8f7f0;
-    --gold: #e8bd62;
-    --line: #c7d3ca;
+    --felt: #173b2b;
+    --felt-light: #24533b;
+    --wood: #4a2b19;
+    --wood-light: #80502d;
+    --paper: #e8d8ad;
+    --paper-light: #f3e8c9;
+    --ink: #2b2117;
+    --brass: #c49a52;
 
+    position: relative;
+    isolation: isolate;
     box-sizing: border-box;
     display: flex;
-    flex-direction: row;
     align-items: stretch;
-    gap: 24px;
+    gap: 28px;
     min-height: 100vh;
-    padding: 32px;
-    color: var(--ink);
-    background: radial-gradient(ellipse at 22% 18%, #f8f7f0 0, transparent 38%), var(--felt);
-    font-family: Bahnschrift, "Trebuchet MS", sans-serif;
+    padding: 38px clamp(22px, 5vw, 76px);
+    overflow: hidden;
+    color: var(--paper-light);
+    background:
+        linear-gradient(rgb(5 30 19 / 28%), rgb(5 30 19 / 28%)),
+        url("./images/game-table-background-low-res-tho.jpg") center / cover no-repeat;
+    font-family: Georgia, "Palatino Linotype", serif;
+}
+
+#frontpage-content::before {
+    position: absolute;
+    z-index: -1;
+    inset: 14px;
+    border: 1px solid rgb(196 154 82 / 38%);
+    content: "";
+    pointer-events: none;
 }
 
 #frontpage-matchmaking {
     display: flex;
     flex: 1 1 0;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
-    gap: clamp(16px, 3vw, 40px);
+    gap: 30px;
     min-width: 0;
 }
 
+#matchmaking-mode-selection {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+}
+
+.matchmaking-header {
+    padding-left: 4px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: var(--brass);
+    font: 700 13px/1.2 "Trebuchet MS", sans-serif;
+    text-transform: uppercase;
+}
+
+.matchmaking-header h1 {
+    margin: 0;
+    color: var(--paper-light);
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1;
+    text-shadow: 3px 4px 0 #0b2118;
+    text-align: center;
+}
+
+.tagline {
+    margin: 11px 0 0;
+    color: #c4c5a5;
+    font-size: 17px;
+    font-style: italic;
+}
+
 .game-rooms {
+    padding-top: 10%;
+    position: relative;
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
-    gap: 14px;
-    max-width: 440px;
+    gap: 12px;
+    max-width: 460px;
     min-width: 0;
-    height:100%;
-    padding: 22px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--paper);
-    box-shadow: 0 12px 30px rgb(23 44 43 / 8%);
+    min-height: 300px;
+    padding: 24px;
+    border: 3px solid #2b190f;
+    outline: 1px solid var(--wood-light);
+    outline-offset: -7px;
+    color: var(--paper-light);
+    background:
+        url("./images/broww-wood.jpg") center / cover no-repeat;
+    box-shadow: 7px 9px 0 rgb(8 20 14 / 42%), inset 0 0 24px rgb(20 10 5 / 38%);
+    clip-path: polygon(0 10px, 10px 0, calc(100% - 14px) 0, 100% 13px, 100% calc(100% - 8px), calc(100% - 9px) 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+.game-rooms h2 {
+    margin: 0 0 5px;
+    padding: 0 0 12px;
+    border-bottom: 1px solid rgb(232 216 173 / 35%);
+    color: var(--paper-light);
+    font-size: 22px;
+    font-weight: 600;
 }
 
 .game-button {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    min-height: 64px;
-    padding: 14px 18px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    color: var(--ink);
-    background: #fffefa;
-    font: 600 18px/1.25 Bahnschrift, "Trebuchet MS", sans-serif;
-    text-align: right;
+    min-height: 62px;
+    padding: 13px 48px 13px 16px;
+    border: 1px solid #b49762;
+    border-left: 5px solid #6b4725;
+    border-radius: 0;
+    color: #fff0cf;
+    background-image:
+        linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)),
+        url("./images/juicy-red-wood.jpg");
+    background-position: center;
+    background-size: cover;
+    box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
+    font: 700 17px/1.25 Georgia, "Palatino Linotype", serif;
+    text-align: left;
+    text-shadow: 1px 1px 2px #241207;
     cursor: pointer;
-    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+    transition: transform 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.game-button::after {
+    position: absolute;
+    right: 16px;
+    color: #f1d7a5;
+    content: "♠";
+    font-size: 23px;
+}
+
+.game-button:nth-of-type(3)::after,
+.game-button:nth-of-type(4)::after {
+    color: #8c3028;
 }
 
 .game-button:hover {
-    border-color: #768f7d;
-    background: #f0f5ed;
+    transform: translate(-2px, -2px);
+    background-image:
+        linear-gradient(rgb(34 12 4 / 12%), rgb(34 12 4 / 12%)),
+        url("./images/juicy-red-wood.jpg");
+    box-shadow: 4px 5px 0 rgb(25 14 7 / 45%);
 }
 
 .game-button:focus-visible,
 #side-navigation-menu a:focus-visible {
-    outline: 3px solid #bf8d2d;
+    outline: 3px solid #e2bd70;
     outline-offset: 3px;
 }
 
 #side-navigation-menu {
     box-sizing: border-box;
     display: flex;
-    flex: 0 0 clamp(220px, 22vw, 320px);
+    flex: 0 0 238px;
     flex-direction: column;
     justify-content: center;
-    gap: 6px;
+    gap: 5px;
     align-self: stretch;
-    padding: 20px;
-    border-radius: 6px;
-    color: #f8f7f0;
-    background: var(--ink);
-    height: var(game-rooms-height);
+    margin: 9px 0;
+    padding: 18px 15px;
+    border: 3px solid #2b190f;
+    outline: 1px solid var(--wood-light);
+    outline-offset: -7px;
+    color: var(--paper-light);
+    background:
+        url("./images/long-wood.jpg") center / cover;
+    box-shadow: 7px 9px 0 rgb(8 20 14 / 42%), inset 0 0 22px rgb(20 10 5 / 40%);
+    clip-path: polygon(0 10px, 10px 0, calc(100% - 13px) 0, 100% 12px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 13px));
 }
 
 #side-navigation-menu li {
@@ -101,23 +194,47 @@
 }
 
 #side-navigation-menu a:hover {
-    background: rgb(255 255 255 / 7%);
+    border-left-color: var(--brass);
+    color: #f6e8c4;
+    background: rgb(20 11 6 / 25%);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
     #frontpage-content {
-        flex-direction: column;
-        gap: 18px;
-        padding: 18px;
+        gap: 20px;
+        padding: 30px;
     }
 
-    #frontpage-matchmaking {
-        flex-direction: column;
+    #side-navigation-menu {
+        flex-basis: 190px;
     }
 
     .game-rooms {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 700px) {
+    #frontpage-content {
+        flex-direction: column;
+        gap: 22px;
+        padding: 30px 24px;
+        overflow: visible;
+    }
+
+    #frontpage-matchmaking {
+        gap: 22px;
+    }
+
+    .matchmaking-header h1 {
+        font-size: 44px;
+    }
+
+    .game-rooms {
+        flex: 0 0 auto;
         width: 100%;
         max-width: none;
+        min-height: 0;
         box-sizing: border-box;
     }
 
@@ -125,5 +242,6 @@
         flex: 0 0 auto;
         width: 100%;
         box-sizing: border-box;
+        margin: 0;
     }
 }
