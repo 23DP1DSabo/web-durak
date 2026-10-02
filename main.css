@@ -1,0 +1,129 @@
+#frontpage-content {
+    --ink: #331b0c;
+    --felt: #e6eee7;
+    --paper: #f8f7f0;
+    --gold: #e8bd62;
+    --line: #c7d3ca;
+
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 24px;
+    min-height: 100vh;
+    padding: 32px;
+    color: var(--ink);
+    background: radial-gradient(ellipse at 22% 18%, #f8f7f0 0, transparent 38%), var(--felt);
+    font-family: Bahnschrift, "Trebuchet MS", sans-serif;
+}
+
+#frontpage-matchmaking {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(16px, 3vw, 40px);
+    min-width: 0;
+}
+
+.game-rooms {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 14px;
+    max-width: 440px;
+    min-width: 0;
+    height:100%;
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    box-shadow: 0 12px 30px rgb(23 44 43 / 8%);
+}
+
+.game-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 64px;
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--ink);
+    background: #fffefa;
+    font: 600 18px/1.25 Bahnschrift, "Trebuchet MS", sans-serif;
+    text-align: right;
+    cursor: pointer;
+    transition: transform 140ms ease, border-color 140ms ease, background-color 140ms ease;
+}
+
+.game-button:hover {
+    border-color: #768f7d;
+    background: #f0f5ed;
+}
+
+.game-button:focus-visible,
+#side-navigation-menu a:focus-visible {
+    outline: 3px solid #bf8d2d;
+    outline-offset: 3px;
+}
+
+#side-navigation-menu {
+    box-sizing: border-box;
+    display: flex;
+    flex: 0 0 clamp(220px, 22vw, 320px);
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    align-self: stretch;
+    padding: 20px;
+    border-radius: 6px;
+    color: #f8f7f0;
+    background: var(--ink);
+    height: var(game-rooms-height);
+}
+
+#side-navigation-menu li {
+    list-style: none;
+}
+
+#side-navigation-menu a {
+    display: block;
+    padding: 14px 12px;
+    border-left: 3px solid transparent;
+    color: inherit;
+    font-size: 17px;
+    text-decoration: none;
+    transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+#side-navigation-menu a:hover {
+    background: rgb(255 255 255 / 7%);
+}
+
+@media (max-width: 760px) {
+    #frontpage-content {
+        flex-direction: column;
+        gap: 18px;
+        padding: 18px;
+    }
+
+    #frontpage-matchmaking {
+        flex-direction: column;
+    }
+
+    .game-rooms {
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+    }
+
+    #side-navigation-menu {
+        flex: 0 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
