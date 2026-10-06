@@ -17,6 +17,7 @@ model User {
   email String  @unique
   name  String?
   posts Post[]
+  passwordHash String
 } 
 model Post { 
   id        Int     @id @default(autoincrement()) 

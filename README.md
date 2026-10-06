@@ -1,4 +1,10 @@
 # DuraKlash
+## Palaist lokāli
+1. Nokopē `.env.example` uz `.env` un ievadi savas MySQL datubāzes vērtības.
+2. Palaid `npx prisma migrate deploy`, lai pievienotu datubāzei paroles lauku.
+3. Atsevišķos termināļos palaid `npm run server` un `npm run dev`.
+4. Atver `http://localhost:3000/auth.html`.
+
 ## Kurss: DP4-1
 ## Dalībnieki
 - Daniels Šabovičs (izstrādātājs, frontend, spēles loģika, testētājs);

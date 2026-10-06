@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="lv">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Pieslēgties | DuraKlash</title>
+    </head>
+    <body>
+        <main>
+            <h1>DuraKlash</h1>
+            <p><a href="/index.html">Atpakaļ uz sākumu</a></p>
+            <button id="show-login" type="button">Pieslēgties</button>
+            <button id="show-register" type="button">Reģistrēties</button>
+
+            <form id="login-form">
+                <h2>Pieslēgties</h2>
+                <label for="login-email">E-pasts</label>
+                <input id="login-email" name="email" type="email" autocomplete="email" required>
+                </br><label for="login-password">Parole</label>
+                <input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="8">
+                <button type="submit">Pieslēgties</button>
+            </form>
+
+            <form id="register-form" hidden>
+                <h2>Reģistrēties</h2>
+                <label for="register-name">Vārds</label>
+                <input id="register-name" name="name" autocomplete="name">
+                </br><label for="register-email">E-pasts</label>
+                <input id="register-email" name="email" type="email" autocomplete="email" required>
+                </br><label for="register-password">Parole</label>
+                <input id="register-password" name="password" type="password" autocomplete="new-password" required minlength="8">
+                </br><button type="submit">Izveidot kontu</button>
+            </form>
+
+            <section id="account" hidden>
+                <h2 id="account-name"></h2>
+                <p id="account-email"></p>
+                <button id="logout" type="button">Izrakstīties</button>
+            </section>
+            <p id="auth-message" role="status" aria-live="polite"></p>
+        </main>
+        <script type="module" src="/auth.js"></script>
+    </body>
+</html>
