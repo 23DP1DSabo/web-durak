@@ -12,6 +12,9 @@ export default defineConfig({
       input: {
         main: 'index.html',
         auth: 'auth.html',
+        friends: 'friends.html',
+        rules: 'rules.html',
+        settings: 'settings.html',
       },
     },
   },

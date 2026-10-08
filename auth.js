@@ -10,8 +10,7 @@ function showMessage(text) {
 function showAccount(user) {
   loginForm.hidden = true;
   registerForm.hidden = true;
-  document.querySelector("#show-login").hidden = true;
-  document.querySelector("#show-register").hidden = true;
+  document.querySelector(".auth-tabs").hidden = true;
   account.hidden = false;
   document.querySelector("#account-name").textContent = user.name || "Konts";
   document.querySelector("#account-email").textContent = user.email;
@@ -38,12 +37,16 @@ async function submitAuth(form, endpoint) {
 document.querySelector("#show-login").addEventListener("click", () => {
   loginForm.hidden = false;
   registerForm.hidden = true;
+  document.querySelector("#show-login").setAttribute("aria-pressed", "true");
+  document.querySelector("#show-register").setAttribute("aria-pressed", "false");
   showMessage("");
 });
 
 document.querySelector("#show-register").addEventListener("click", () => {
   loginForm.hidden = true;
   registerForm.hidden = false;
+  document.querySelector("#show-login").setAttribute("aria-pressed", "false");
+  document.querySelector("#show-register").setAttribute("aria-pressed", "true");
   showMessage("");
 });
 
@@ -60,9 +63,10 @@ registerForm.addEventListener("submit", (event) => {
 document.querySelector("#logout").addEventListener("click", async () => {
   await fetch("/api/auth/logout", { method: "POST" });
   account.hidden = true;
-  document.querySelector("#show-login").hidden = false;
-  document.querySelector("#show-register").hidden = false;
+  document.querySelector(".auth-tabs").hidden = false;
   loginForm.hidden = false;
+  document.querySelector("#show-login").setAttribute("aria-pressed", "true");
+  document.querySelector("#show-register").setAttribute("aria-pressed", "false");
   showMessage("Jūs esat izrakstījies.");
 });
 

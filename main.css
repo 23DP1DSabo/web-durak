@@ -1,4 +1,4 @@
-#frontpage-content {
+:root {
     --felt: #173b2b;
     --felt-light: #24533b;
     --wood: #4a2b19;
@@ -7,15 +7,17 @@
     --paper-light: #f3e8c9;
     --ink: #2b2117;
     --brass: #c49a52;
+}
 
+#frontpage-content {
     position: relative;
     isolation: isolate;
     box-sizing: border-box;
     display: flex;
     align-items: stretch;
-    gap: 28px;
+    gap: clamp(28px, 3vw, 64px);
     min-height: 100vh;
-    padding: 38px clamp(22px, 5vw, 76px);
+    padding: clamp(38px, 4vw, 110px) clamp(22px, 4vw, 140px);
     overflow: hidden;
     color: var(--paper-light);
     background:
@@ -38,14 +40,14 @@
     flex: 1 1 0;
     flex-direction: column;
     justify-content: center;
-    gap: 30px;
+    gap: clamp(22px, 2.2vw, 48px);
     min-width: 0;
 }
 
 #matchmaking-mode-selection {
     display: flex;
     flex-direction: row;
-    gap: 12px;
+    gap: clamp(12px, 1.2vw, 24px);
 }
 
 .matchmaking-header {
@@ -62,7 +64,7 @@
 .matchmaking-header h1 {
     margin: 0;
     color: var(--paper-light);
-    font-size: 52px;
+    font-size: clamp(52px, 5vw, 100px);
     font-weight: 700;
     line-height: 1;
     text-shadow: 3px 4px 0 #0b2118;
@@ -72,29 +74,27 @@
 .tagline {
     margin: 11px 0 0;
     color: #c4c5a5;
-    font-size: 17px;
+    font-size: clamp(17px, 1.3vw, 24px);
     font-style: italic;
 }
 
 .game-rooms {
-    padding-top: 10%;
     position: relative;
     display: flex;
     flex: 1 1 0;
     flex-direction: column;
     align-items: stretch;
     justify-content: center;
-    gap: 12px;
-    max-width: 460px;
+    gap: clamp(12px, 1vw, 22px);
+    max-width: clamp(460px, 38vw, 1300px);
     min-width: 0;
-    min-height: 300px;
-    padding: 24px;
+    min-height: clamp(300px, 42vh, 680px);
+    padding: clamp(24px, 2.3vw, 56px);
     border: 3px solid #2b190f;
     outline: 1px solid var(--wood-light);
     outline-offset: -7px;
     color: var(--paper-light);
-    background:
-        url("./images/broww-wood.jpg") center / cover no-repeat;
+    background: url("./images/broww-wood.jpg") center / cover no-repeat;
     box-shadow: 7px 9px 0 rgb(8 20 14 / 42%), inset 0 0 24px rgb(20 10 5 / 38%);
     clip-path: polygon(0 10px, 10px 0, calc(100% - 14px) 0, 100% 13px, 100% calc(100% - 8px), calc(100% - 9px) 100%, 12px 100%, 0 calc(100% - 12px));
 }
@@ -104,7 +104,7 @@
     padding: 0 0 12px;
     border-bottom: 1px solid rgb(232 216 173 / 35%);
     color: var(--paper-light);
-    font-size: 22px;
+    font-size: clamp(22px, 1.6vw, 36px);
     font-weight: 600;
 }
 
@@ -113,8 +113,8 @@
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    min-height: 62px;
-    padding: 13px 48px 13px 16px;
+    min-height: clamp(62px, 4.4vw, 96px);
+    padding: clamp(13px, 1vw, 24px) clamp(48px, 3vw, 72px) clamp(13px, 1vw, 24px) clamp(16px, 1.4vw, 32px);
     border: 1px solid #b49762;
     border-left: 5px solid #6b4725;
     border-radius: 0;
@@ -125,7 +125,7 @@
     background-position: center;
     background-size: cover;
     box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
-    font: 700 17px/1.25 Georgia, "Palatino Linotype", serif;
+    font: 700 clamp(17px, 1.2vw, 28px)/1.25 Georgia, "Palatino Linotype", serif;
     text-align: left;
     text-shadow: 1px 1px 2px #241207;
     cursor: pointer;
@@ -137,19 +137,19 @@
     right: 16px;
     color: #f1d7a5;
     content: "♠";
-    font-size: 23px;
+    font-size: clamp(23px, 2vw, 38px);
 }
 
 #quick-mode-games .game-button::after {
-    width: 50px;
-    height: 50px;
+    width: clamp(36px, 3.2vw, 64px);
+    height: clamp(36px, 3.2vw, 64px);
     background: url("./images/bolt-symbol.png") center / contain no-repeat;
     content: "";
 }
 
 .game-button:nth-of-type(3)::after,
 .game-button:nth-of-type(4)::after {
-    color: #8c3028;
+    color: #f1d7a5;
 }
 
 .game-button:hover {
@@ -169,19 +169,18 @@
 #side-navigation-menu {
     box-sizing: border-box;
     display: flex;
-    flex: 0 0 238px;
+    flex: 0 0 clamp(238px, 15vw, 420px);
     flex-direction: column;
-    justify-content: center;
-    gap: 5px;
+    justify-content: flex-start;
+    gap: clamp(8px, 0.7vw, 16px);
     align-self: stretch;
     margin: 9px 0;
-    padding: 18px 15px;
+    padding: clamp(18px, 1.5vw, 36px) clamp(15px, 1.2vw, 30px);
     border: 3px solid #2b190f;
     outline: 1px solid var(--wood-light);
     outline-offset: -7px;
     color: var(--paper-light);
-    background:
-        url("./images/long-wood.jpg") center / cover;
+    background: url("./images/long-wood.jpg") center / cover;
     box-shadow: 7px 9px 0 rgb(8 20 14 / 42%), inset 0 0 22px rgb(20 10 5 / 40%);
     clip-path: polygon(0 10px, 10px 0, calc(100% - 13px) 0, 100% 12px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 13px));
 }
@@ -194,12 +193,16 @@
     gap: 20px;
 }
 
+#side-navigation-menu li:nth-child(3) {
+    margin-top: auto;
+}
+
 #side-navigation-menu a {
     display: block;
-    padding: 14px 12px;
+    padding: clamp(14px, 1.2vw, 28px) clamp(12px, 1vw, 24px);
     border-left: 3px solid transparent;
     color: inherit;
-    font-size: 17px;
+    font-size: clamp(17px, 1.1vw, 26px);
     text-decoration: none;
     transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
 }
@@ -210,7 +213,36 @@
     background: rgb(20 11 6 / 25%);
 }
 
-@media (max-width: 900px) {
+.content-panel#auth-panel {
+    width: min(100%, clamp(420px, 54vw, 1040px));
+}
+
+.content-panel h2 {
+    margin: clamp(24px, 3vw, 42px) 0 20px;
+    color: var(--paper-light);
+    font-size: clamp(26px, 2.8vw, 42px);
+}
+
+.placeholder-sections {
+    display: grid;
+    gap: clamp(20px, 3vh, 36px);
+}
+
+.placeholder-section h3 {
+    margin: 0 0 10px;
+    color: #e2bd70;
+    font-size: clamp(17px, 1.5vw, 22px);
+    font-weight: 600;
+}
+
+.content-placeholder {
+    min-height: clamp(84px, 12vh, 160px);
+    border: 1px solid rgb(232 216 173 / 35%);
+    background: rgb(23 59 43 / 24%);
+    box-shadow: inset 0 0 18px rgb(20 10 5 / 24%);
+}
+
+@media (max-width: 1100px) {
     #frontpage-content {
         gap: 20px;
         padding: 30px;
@@ -237,6 +269,10 @@
         gap: 22px;
     }
 
+    #matchmaking-mode-selection {
+        flex-direction: column;
+    }
+
     .matchmaking-header h1 {
         font-size: 44px;
     }
@@ -254,5 +290,194 @@
         width: 100%;
         box-sizing: border-box;
         margin: 0;
+    }
+
+    #side-navigation-menu li:nth-child(3) {
+        margin-top: 0;
+    }
+}
+
+.auth-page {
+    box-sizing: border-box;
+    display: grid;
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: clamp(24px, 5vw, 100px);
+    color: var(--paper-light);
+    background:
+        linear-gradient(rgb(5 30 19 / 35%), rgb(5 30 19 / 35%)),
+        url("./images/game-table-background-low-res-tho.jpg") center / cover fixed no-repeat;
+    font-family: Georgia, "Palatino Linotype", serif;
+}
+
+#auth-panel {
+    position: relative;
+    box-sizing: border-box;
+    align-self: center;
+    justify-self: center;
+    width: min(100%, clamp(420px, 42vw, 760px));
+    padding: clamp(28px, 4vw, 64px);
+    border: 3px solid #2b190f;
+    outline: 1px solid var(--wood-light);
+    outline-offset: -9px;
+    color: var(--paper-light);
+    background: url("./images/broww-wood.jpg") center / cover;
+    box-shadow: 9px 12px 0 rgb(8 20 14 / 42%), inset 0 0 30px rgb(20 10 5 / 48%);
+    clip-path: polygon(0 12px, 12px 0, calc(100% - 16px) 0, 100% 15px, 100% calc(100% - 10px), calc(100% - 12px) 100%, 14px 100%, 0 calc(100% - 15px));
+}
+
+.auth-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.auth-header h1 {
+    margin: 8px 0 16px;
+    color: var(--paper-light);
+    font-size: clamp(42px, 5vw, 76px);
+    line-height: 1;
+    text-shadow: 3px 4px 0 #0b2118;
+}
+
+.auth-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    padding: 7px 14px;
+    position: fixed;
+    z-index: 2;
+    top: clamp(16px, 2.5vw, 36px);
+    left: clamp(16px, 2.5vw, 36px);
+    border: 1px solid #b49762;
+    border-left: 5px solid #6b4725;
+    color: #fff0cf;
+    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("./images/juicy-red-wood.jpg");
+    background-position: center;
+    background-size: cover;
+    box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
+    font: 700 14px/1.4 "Trebuchet MS", sans-serif;
+    text-decoration: none;
+    transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+}
+
+.auth-back-link::before {
+    content: "←";
+    font-size: 20px;
+}
+
+.auth-back-link:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+    box-shadow: 4px 5px 0 rgb(25 14 7 / 45%);
+}
+
+.auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: clamp(24px, 3vw, 40px) 0 26px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgb(232 216 173 / 35%);
+}
+
+.auth-page button {
+    min-height: 48px;
+    padding: 12px 16px;
+    border: 1px solid #b49762;
+    border-left: 5px solid #6b4725;
+    border-radius: 0;
+    color: #fff0cf;
+    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("./images/juicy-red-wood.jpg");
+    background-position: center;
+    background-size: cover;
+    box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
+    font: 700 16px/1.25 Georgia, "Palatino Linotype", serif;
+    cursor: pointer;
+    transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+}
+
+.auth-page button:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+    box-shadow: 4px 5px 0 rgb(25 14 7 / 45%);
+}
+
+.auth-page button[aria-pressed="true"] {
+    border-left-color: #d6b66d;
+    box-shadow: inset 0 0 0 2px rgb(226 189 112 / 35%), 2px 3px 0 rgb(25 14 7 / 40%);
+}
+
+.auth-page button:focus-visible,
+.auth-page a:focus-visible,
+.auth-page input:focus-visible {
+    outline: 3px solid #e2bd70;
+    outline-offset: 3px;
+}
+
+.auth-page form {
+    display: grid;
+    gap: 16px;
+}
+
+.auth-page form[hidden],
+.auth-page [hidden] {
+    display: none !important;
+}
+
+.auth-page form h2,
+#account h2 {
+    margin: 0 0 4px;
+    font-size: clamp(24px, 2.2vw, 34px);
+}
+
+.auth-field {
+    display: grid;
+    gap: 7px;
+}
+
+.auth-field label {
+    color: #f3e8c9;
+    font-size: 15px;
+}
+
+.auth-field input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid #c7a76e;
+    border-radius: 0;
+    color: var(--ink);
+    background: rgb(243 232 201 / 96%);
+    font: 16px/1.3 Georgia, "Palatino Linotype", serif;
+}
+
+.auth-page form button,
+#account button {
+    margin-top: 8px;
+}
+
+#auth-message {
+    min-height: 1.4em;
+    margin: 18px 0 0;
+    color: #f3e8c9;
+    font-size: 15px;
+}
+
+#account p {
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+    .auth-page {
+        padding: 18px;
+        background-attachment: scroll;
+    }
+
+    #auth-panel {
+        padding: 28px 24px;
     }
 }
