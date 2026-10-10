@@ -13,10 +13,11 @@ const roomCodeInput = document.querySelector("#room-code-input");
 const joinRoomMessage = document.querySelector("#join-room-message");
 let selectedMode = "classic";
 
-function openRoomPage(code) {
+function openRoomPage(code, role) {
   const roomUrl = new URL("./room.html", window.location.href);
   roomUrl.searchParams.set("mode", selectedMode);
   roomUrl.searchParams.set("code", code);
+  roomUrl.searchParams.set("role", role);
   window.location.assign(roomUrl);
 }
 
@@ -44,7 +45,7 @@ roomDialog.addEventListener("click", (event) => {
   if (!action) return;
 
   if (action === "create") {
-    openRoomPage(createRoomCode());
+    openRoomPage(createRoomCode(), "host");
   } else if (action === "show-join") {
     roomChoiceActions.hidden = true;
     joinRoomForm.hidden = false;
@@ -74,5 +75,5 @@ joinRoomForm.addEventListener("submit", (event) => {
     return;
   }
 
-  openRoomPage(code);
+  openRoomPage(code, "player");
 });

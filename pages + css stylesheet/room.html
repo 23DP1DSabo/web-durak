@@ -8,14 +8,40 @@
     </head>
     <body class="auth-page room-page">
         <a class="auth-back-link" href="./index.html">Atpakaļ uz sākumu</a>
-        <main id="auth-panel" class="content-panel">
-            <header class="auth-header">
-                <h1>DuraKlash</h1>
-            </header>
-            <h2 id="room-mode-name">Spēles istaba</h2>
-            <p class="room-description">Istabas kods</p>
-            <p id="room-code" class="room-code" aria-live="polite"></p>
-            <p class="room-description">Spēles istaba ir gatava.</p>
+        <main class="room-layout">
+            <div class="room-lobby">
+                <section class="room-side-panel" aria-labelledby="time-limit-heading">
+                    <h2 id="time-limit-heading">Laika limits</h2>
+                    <p class="room-description">Kopējais laiks katram spēlētājam</p>
+                    <fieldset id="time-limit-options" class="time-limit-options">
+                        <legend class="visually-hidden">Izvēlies laika limitu</legend>
+                        <label><input type="radio" name="time-limit" value="600" checked><span>10 min</span></label>
+                        <label><input type="radio" name="time-limit" value="300"><span>5 min</span></label>
+                        <label><input type="radio" name="time-limit" value="180"><span>3 min</span></label>
+                        <label><input type="radio" name="time-limit" value="60"><span>1 min</span></label>
+                    </fieldset>
+                    <p id="time-limit-status" class="room-setting-status" role="status" aria-live="polite">Katram spēlētājam: 10 min</p>
+                </section>
+                <section id="auth-panel" class="content-panel room-center-panel" aria-labelledby="room-mode-name">
+                    <header class="auth-header">
+                        <h1>DuraKlash</h1>
+                    </header>
+                    <h2 id="room-mode-name">Spēles istaba</h2>
+                    <p class="room-description">Istabas kods</p>
+                    <p id="room-code" class="room-code" aria-live="polite"></p>
+                    <p class="room-description">Spēles istaba ir gatava.</p>
+                </section>
+                <section class="room-side-panel player-panel" aria-labelledby="player-list-heading">
+                    <h2 id="player-list-heading">Spēlētāji <span id="player-count">1</span></h2>
+                    <ul id="player-list" class="player-list" aria-live="polite">
+                        <li class="player-list-item">
+                            <span class="player-presence" aria-hidden="true"></span>
+                            <span id="player-name">Viesis</span>
+                            <span id="player-role" class="player-role">Tu</span>
+                        </li>
+                    </ul>
+                </section>
+            </div>
         </main>
         <script type="module" src="../room.js"></script>
     </body>
