@@ -22,7 +22,7 @@
     color: var(--paper-light);
     background:
         linear-gradient(rgb(5 30 19 / 28%), rgb(5 30 19 / 28%)),
-        url("./images/game-table-background-low-res-tho.jpg") center / cover no-repeat;
+        url("../images/game-table-background-low-res-tho.jpg") center / cover no-repeat;
     font-family: Georgia, "Palatino Linotype", serif;
 }
 
@@ -94,7 +94,7 @@
     outline: 1px solid var(--wood-light);
     outline-offset: -7px;
     color: var(--paper-light);
-    background: url("./images/broww-wood.jpg") center / cover no-repeat;
+    background: url("../images/broww-wood.jpg") center / cover no-repeat;
     box-shadow: 7px 9px 0 rgb(8 20 14 / 42%), inset 0 0 24px rgb(20 10 5 / 38%);
     clip-path: polygon(0 10px, 10px 0, calc(100% - 14px) 0, 100% 13px, 100% calc(100% - 8px), calc(100% - 9px) 100%, 12px 100%, 0 calc(100% - 12px));
 }
@@ -121,7 +121,7 @@
     color: #fff0cf;
     background-image:
         linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)),
-        url("./images/juicy-red-wood.jpg");
+        url("../images/juicy-red-wood.jpg");
     background-position: center;
     background-size: cover;
     box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
@@ -143,7 +143,7 @@
 #quick-mode-games .game-button::after {
     width: clamp(36px, 3.2vw, 64px);
     height: clamp(36px, 3.2vw, 64px);
-    background: url("./images/bolt-symbol.png") center / contain no-repeat;
+    background: url("../images/bolt-symbol.png") center / contain no-repeat;
     content: "";
 }
 
@@ -156,7 +156,7 @@
     transform: translate(-2px, -2px);
     background-image:
         linear-gradient(rgb(34 12 4 / 12%), rgb(34 12 4 / 12%)),
-        url("./images/juicy-red-wood.jpg");
+        url("../images/juicy-red-wood.jpg");
     box-shadow: 4px 5px 0 rgb(25 14 7 / 45%);
 }
 
@@ -180,14 +180,14 @@
     outline: 1px solid var(--wood-light);
     outline-offset: -7px;
     color: var(--paper-light);
-    background: url("./images/long-wood.jpg") center / cover;
+    background: url("../images/long-wood.jpg") center / cover;
     box-shadow: 7px 9px 0 rgb(8 20 14 / 42%), inset 0 0 22px rgb(20 10 5 / 40%);
     clip-path: polygon(0 10px, 10px 0, calc(100% - 13px) 0, 100% 12px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 13px));
 }
 
 #side-navigation-menu li {
     list-style: none;
-    background-image: url("./images/juicy-red-wood.jpg");
+    background-image: url("../images/juicy-red-wood.jpg");
     border: 1px solid #b49762;
     border-left: 5px solid #6b4725;
     gap: 20px;
@@ -240,6 +240,115 @@
     border: 1px solid rgb(232 216 173 / 35%);
     background: rgb(23 59 43 / 24%);
     box-shadow: inset 0 0 18px rgb(20 10 5 / 24%);
+}
+
+.room-dialog {
+    box-sizing: border-box;
+    width: min(100% - 32px, 480px);
+    padding: 30px;
+    border: 3px solid #2b190f;
+    outline: 1px solid var(--wood-light);
+    outline-offset: -8px;
+    color: var(--paper-light);
+    background: linear-gradient(rgb(74 43 25 / 82%), rgb(74 43 25 / 82%)), url("../images/broww-wood.jpg") center / cover;
+    box-shadow: 8px 10px 0 rgb(8 20 14 / 42%), inset 0 0 24px rgb(20 10 5 / 38%);
+    font-family: Georgia, "Palatino Linotype", serif;
+}
+
+.room-dialog::backdrop {
+    background: rgb(5 18 12 / 78%);
+    backdrop-filter: blur(3px);
+}
+
+.room-dialog h2 {
+    margin: 8px 0 24px;
+    font-size: clamp(24px, 5vw, 34px);
+}
+
+.room-dialog-close {
+    display: block;
+    margin: 0 0 22px auto;
+}
+
+.room-dialog-actions {
+    display: grid;
+    gap: 10px;
+}
+
+.room-dialog button {
+    min-height: 48px;
+    padding: 11px 15px;
+    border: 1px solid #b49762;
+    border-left: 5px solid #6b4725;
+    color: #fff0cf;
+    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("../images/juicy-red-wood.jpg");
+    background-position: center;
+    background-size: cover;
+    box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
+    font: 700 16px/1.25 Georgia, "Palatino Linotype", serif;
+    cursor: pointer;
+}
+
+.room-dialog button:hover {
+    filter: brightness(1.12);
+}
+
+.room-dialog button:focus-visible,
+.room-dialog input:focus-visible {
+    outline: 3px solid #e2bd70;
+    outline-offset: 3px;
+}
+
+#join-room-form {
+    display: grid;
+    gap: 12px;
+}
+
+#join-room-form[hidden] {
+    display: none;
+}
+
+#join-room-form label {
+    font-size: 15px;
+}
+
+#join-room-form input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 11px 13px;
+    border: 1px solid #c7a76e;
+    color: var(--ink);
+    background: rgb(243 232 201 / 96%);
+    font: 700 18px/1.3 Georgia, "Palatino Linotype", serif;
+    text-transform: uppercase;
+}
+
+#join-room-message {
+    margin: 0;
+    color: #ffd2bc;
+    font-size: 14px;
+}
+
+.room-code {
+    margin: 16px 0 24px;
+    padding: 18px 12px;
+    border: 1px solid rgb(232 216 173 / 55%);
+    color: #fff0cf;
+    background: rgb(23 59 43 / 48%);
+    font: 700 clamp(28px, 8vw, 48px)/1.2 Georgia, "Palatino Linotype", serif;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.room-description {
+    color: var(--paper-light);
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.room-page .auth-back-link {
+    position: absolute;
 }
 
 @media (max-width: 1100px) {
@@ -306,7 +415,7 @@
     color: var(--paper-light);
     background:
         linear-gradient(rgb(5 30 19 / 35%), rgb(5 30 19 / 35%)),
-        url("./images/game-table-background-low-res-tho.jpg") center / cover fixed no-repeat;
+        url("../images/game-table-background-low-res-tho.jpg") center / cover fixed no-repeat;
     font-family: Georgia, "Palatino Linotype", serif;
 }
 
@@ -321,7 +430,7 @@
     outline: 1px solid var(--wood-light);
     outline-offset: -9px;
     color: var(--paper-light);
-    background: url("./images/broww-wood.jpg") center / cover;
+    background: url("../images/broww-wood.jpg") center / cover;
     box-shadow: 9px 12px 0 rgb(8 20 14 / 42%), inset 0 0 30px rgb(20 10 5 / 48%);
     clip-path: polygon(0 12px, 12px 0, calc(100% - 16px) 0, 100% 15px, 100% calc(100% - 10px), calc(100% - 12px) 100%, 14px 100%, 0 calc(100% - 15px));
 }
@@ -354,7 +463,7 @@
     border: 1px solid #b49762;
     border-left: 5px solid #6b4725;
     color: #fff0cf;
-    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("./images/juicy-red-wood.jpg");
+    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("../images/juicy-red-wood.jpg");
     background-position: center;
     background-size: cover;
     box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
@@ -390,7 +499,7 @@
     border-left: 5px solid #6b4725;
     border-radius: 0;
     color: #fff0cf;
-    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("./images/juicy-red-wood.jpg");
+    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("../images/juicy-red-wood.jpg");
     background-position: center;
     background-size: cover;
     box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
@@ -479,5 +588,9 @@
 
     #auth-panel {
         padding: 28px 24px;
+    }
+
+    .room-dialog {
+        padding: 26px 22px;
     }
 }

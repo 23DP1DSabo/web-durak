@@ -1,0 +1,64 @@
+<!--Šī ir tā lapa, kas veras vaļā palaižot localhost-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>DuraKlash</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" type="text/css" href="./main.css">
+    </head>
+    <body>
+        <div id="frontpage-content">
+            <div id="frontpage-matchmaking">
+                <header class="matchmaking-header">
+                    <h1>DuraKlash</h1>
+                </header>
+                <div id="matchmaking-mode-selection">
+                <div id="regular-mode-games" class="game-rooms">
+                    <h2>Spēles istabas</h2>
+                    <button id="game-classic" class="game-button" data-room-mode="classic">Klasiskais duraks</button>
+                    <button id="game-passing" class="game-button" data-room-mode="passing">Padošanu duraks</button>
+                    <button id="game-japan" class="game-button" data-room-mode="japan">Japāņu duraks</button>
+                    <button id="game-duraklash" class="game-button" data-room-mode="duraklash">DuraKlash</button>
+                </div>
+                <div id="quick-mode-games" class="game-rooms">
+                    <h2>Ātrās spēles istabas</h2>
+                    <button id="quick-game-classic" class="game-button">Klasiskais duraks</button>
+                    <button id="quick-game-passing" class="game-button">Padošanu duraks</button>
+                    <button id="quick-game-japan" class="game-button">Japāņu duraks</button>
+                    <button id="quick-game-duraklash" class="game-button">DuraKlash</button>
+
+                </div>
+            </div>
+            </div>
+            <nav id="side-navigation-menu">
+                <li><a href="./auth.html">Pieslēgties</a></li>
+                <li><a href="./friends.html">Draugi</a></li>
+                <li><a href="./rules.html">Noteikumi</a></li>
+                <li><a href="./settings.html">Iestatījumi</a></li>
+            </nav>
+        </div>
+        <dialog id="room-choice-dialog" class="room-dialog" aria-labelledby="room-dialog-title">
+            <button class="room-dialog-close" type="button" data-room-action="close">Aizvērt</button>
+            <p id="room-dialog-mode" class="eyebrow"></p>
+            <h2 id="room-dialog-title">Spēles istaba</h2>
+            <div id="room-choice-actions" class="room-dialog-actions">
+                <button type="button" data-room-action="create">Izveidot istabu</button>
+                <button type="button" data-room-action="show-join">Pievienoties istabai</button>
+            </div>
+            <form id="join-room-form" hidden novalidate>
+                <label for="room-code-input">8 simbolu istabas kods</label>
+                <input id="room-code-input" name="code" type="text" minlength="8" maxlength="8" pattern="[A-Za-z0-9]{8}" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
+                <p id="join-room-message" role="status" aria-live="polite" hidden></p>
+                <div class="room-dialog-actions">
+                    <button type="submit">Pievienoties</button>
+                    <button type="button" data-room-action="back">Atpakaļ</button>
+                </div>
+            </form>
+        </dialog>
+        <script type="module" src="../matchmaking.js"></script>
+    </body>
+</html>
