@@ -16,6 +16,16 @@ const scryptAsync = promisify(scrypt);
 
 authApp.use(express.json());
 
+authApp.get("/api/health/db", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ database: "connected" });
+  } catch (error) {
+    console.error("Database health check failed:", error);
+    res.status(500).json({ database: "disconnected" });
+  }
+});
+
 function hashToken(token) {
   return createHash("sha256").update(token).digest("hex");
 }
