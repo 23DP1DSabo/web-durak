@@ -28,6 +28,7 @@ export default defineConfig({
       input: {
         main: 'pages + css stylesheet/index.html',
         room: 'pages + css stylesheet/room.html',
+        gameTable: 'pages + css stylesheet/game-table.html',
         auth: 'pages + css stylesheet/auth.html',
         friends: 'pages + css stylesheet/friends.html',
         rules: 'pages + css stylesheet/rules.html',

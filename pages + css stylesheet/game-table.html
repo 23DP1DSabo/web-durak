@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="lv">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Spēle | DuraKlash</title>
+        <link rel="stylesheet" href="./main.css">
+    </head>
+    <body class="game-table-page">
+        <header class="game-table-header">
+            <a class="game-brand" href="./index.html">DuraKlash</a>
+            <div class="match-details">
+                <span id="match-mode">Spēle</span>
+                <span class="match-detail-divider" aria-hidden="true"></span>
+                <span>Istaba <strong id="match-code"></strong></span>
+                <span class="match-detail-divider" aria-hidden="true"></span>
+                <span id="match-time-limit">10 min katram</span>
+            </div>
+            <a id="return-to-room" class="game-exit-link" href="./index.html">Istaba</a>
+        </header>
+
+        <main class="table-stage" aria-label="Spēles galds">
+            <section class="table-seat opponent-seat" aria-label="Pretinieks">
+                <div class="seat-identity">
+                    <span class="seat-avatar opponent-avatar" aria-hidden="true">P</span>
+                    <div>
+                        <h1>Pretinieks</h1>
+                        <p>Augšējā vieta</p>
+                    </div>
+                </div>
+                <div class="card-hand opponent-hand" aria-label="Pretinieka kārtis ar mugurām uz augšu">
+                    <span class="card-back" aria-hidden="true"></span>
+                    <span class="card-back" aria-hidden="true"></span>
+                    <span class="card-back" aria-hidden="true"></span>
+                    <span class="card-back" aria-hidden="true"></span>
+                    <span class="card-back" aria-hidden="true"></span>
+                    <span class="card-back" aria-hidden="true"></span>
+                </div>
+            </section>
+
+            <section class="play-surface" aria-label="Kāršu spēles zona">
+                <div class="play-zones" aria-label="Kāršu novietošanas vietas">
+                    <div class="play-zone" aria-label="Uzbrukuma kārts">
+                        <span>Uzbrukums</span>
+                    </div>
+                    <div class="play-zone" aria-label="Aizsardzības kārts">
+                        <span>Aizsardzība</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="table-seat player-seat" aria-label="Tava vieta">
+                <div class="seat-identity">
+                    <span class="seat-avatar player-avatar" aria-hidden="true">D</span>
+                    <div>
+                        <h2 id="match-player-name">Spēlētājs</h2>
+                        <p>Apakšējā vieta <span class="seat-you-label">Tu</span></p>
+                    </div>
+                </div>
+                <div class="card-hand player-hand" aria-label="Tavas kārtis">
+                    <button class="hand-card" type="button" aria-label="Atlasīt septiņi erceni" aria-pressed="false"><img src="../images/PNG-cards-1.3/7_of_hearts.png" alt=""></button>
+                    <button class="hand-card" type="button" aria-label="Atlasīt deviņi pīķi" aria-pressed="false"><img src="../images/PNG-cards-1.3/9_of_spades.png" alt=""></button>
+                    <button class="hand-card" type="button" aria-label="Atlasīt kreiča kalps" aria-pressed="false"><img src="../images/PNG-cards-1.3/jack_of_clubs.png" alt=""></button>
+                    <button class="hand-card" type="button" aria-label="Atlasīt kārava dūzis" aria-pressed="false"><img src="../images/PNG-cards-1.3/ace_of_diamonds.png" alt=""></button>
+                    <button class="hand-card" type="button" aria-label="Atlasīt kreiča sešinieks" aria-pressed="false"><img src="../images/PNG-cards-1.3/6_of_clubs.png" alt=""></button>
+                    <button class="hand-card" type="button" aria-label="Atlasīt ercena kungs" aria-pressed="false"><img src="../images/PNG-cards-1.3/king_of_hearts.png" alt=""></button>
+                </div>
+            </section>
+        </main>
+        <script type="module" src="../game-table.js"></script>
+    </body>
+</html>

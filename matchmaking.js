@@ -14,6 +14,17 @@ const joinRoomMessage = document.querySelector("#join-room-message");
 let selectedMode = "classic";
 
 function openRoomPage(code, role) {
+  if (role === "host") {
+    sessionStorage.setItem(`durak-room:${code}`, JSON.stringify({
+      code,
+      mode: selectedMode,
+      timeLimitSeconds: 600,
+      status: "waiting",
+      createdAt: Date.now(),
+      players: [],
+    }));
+  }
+
   const roomUrl = new URL("./room.html", window.location.href);
   roomUrl.searchParams.set("mode", selectedMode);
   roomUrl.searchParams.set("code", code);
