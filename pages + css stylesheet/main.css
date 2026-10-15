@@ -845,7 +845,8 @@
 .table-stage {
     box-sizing: border-box;
     display: grid;
-    grid-template-rows: min-content minmax(180px, 1fr) min-content;
+    grid-template-columns: minmax(130px, 180px) minmax(0, 1fr);
+    grid-template-rows: min-content minmax(200px, 1fr) min-content;
     gap: clamp(8px, 1.6vh, 18px);
     width: min(100%, 1500px);
     min-height: 0;
@@ -856,6 +857,7 @@
 
 .table-seat {
     display: grid;
+    grid-column: 2;
     grid-template-columns: minmax(170px, 230px) minmax(0, 1fr);
     align-items: center;
     gap: clamp(16px, 3vw, 42px);
@@ -981,10 +983,70 @@
 
 .play-surface {
     position: relative;
-    display: grid;
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     min-height: 0;
-    place-items: center;
     isolation: isolate;
+}
+
+.opponent-seat {
+    grid-row: 1;
+}
+
+.player-seat {
+    grid-row: 3;
+}
+
+.table-status {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    align-self: center;
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    width: 100%;
+    color: #fff0cf;
+    font: 600 13px/1.3 "Trebuchet MS", sans-serif;
+    text-align: center;
+}
+
+#game-status,
+.draw-pile-count,
+.trump-indicator {
+    margin: 0;
+}
+
+.trump-indicator {
+    display: grid;
+    justify-items: center;
+    align-items: center;
+    gap: 6px;
+}
+
+.trump-indicator img {
+    width: clamp(70px, 7vw, 94px);
+    border-radius: 3px;
+    box-shadow: 0 5px 14px rgb(0 0 0 / 35%);
+}
+
+.draw-pile {
+    position: relative;
+    width: clamp(62px, 6vw, 82px);
+    aspect-ratio: 0.69;
+    border: 1px solid #f8f0db;
+    border-radius: 6px;
+    background-color: #742d27;
+    background-image: repeating-linear-gradient(45deg, rgb(244 225 190 / 21%) 0 2px, transparent 2px 7px), repeating-linear-gradient(-45deg, rgb(244 225 190 / 15%) 0 2px, transparent 2px 7px);
+    box-shadow: 3px 3px 0 #d9c69d, 6px 6px 0 #80502d, 9px 9px 0 rgb(0 0 0 / 30%);
+}
+
+.draw-pile[hidden] {
+    display: none;
 }
 
 .play-surface::before {
@@ -999,25 +1061,62 @@
     content: "";
 }
 
-.play-zones {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(16px, 3vw, 40px);
+.played-cards {
+    position: relative;
+    width: clamp(82px, 9vw, 120px);
+    aspect-ratio: 0.69;
 }
 
-.play-zone {
-    display: grid;
-    width: clamp(64px, 8vw, 96px);
-    aspect-ratio: 0.69;
-    place-items: center;
-    border: 1px dashed rgb(232 216 173 / 42%);
-    border-radius: 8px;
-    color: rgb(245 236 216 / 67%);
-    background: rgb(7 42 26 / 20%);
-    font: 10px/1.3 "Trebuchet MS", sans-serif;
-    text-align: center;
-    text-transform: uppercase;
+.played-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 1px solid rgb(248 240 219 / 82%);
+    border-radius: 7px;
+    object-fit: cover;
+    box-shadow: 0 7px 14px rgb(0 0 0 / 35%);
+}
+
+.played-card[hidden] {
+    display: none;
+}
+
+.defense-card:not([hidden]) {
+    transform: translate(28px, 0);
+    z-index: 1;
+}
+
+.game-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.game-actions button {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("../images/juicy-red-wood.jpg") center / cover;
+    font: 700 13px/1.2 Georgia, "Palatino Linotype", serif;
+    cursor: pointer;
+}
+
+.game-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.game-actions button:focus-visible {
+    outline: 3px solid #e2bd70;
+    outline-offset: 3px;
+}
+
+.game-actions button[hidden] {
+    display: none;
 }
 
 .game-table-page a:focus-visible {
@@ -1063,7 +1162,8 @@
     }
 
     .table-stage {
-        grid-template-rows: min-content minmax(160px, 1fr) min-content;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: min-content min-content minmax(180px, 1fr) min-content;
         gap: 8px;
         min-height: calc(100svh - 88px);
         padding: 16px 12px 20px;
@@ -1072,6 +1172,32 @@
     .table-seat {
         grid-template-columns: minmax(106px, 0.8fr) minmax(0, 1.6fr);
         gap: 8px;
+        grid-column: 1;
+    }
+
+    .table-status {
+        grid-column: 1;
+        grid-row: 1;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+        font-size: 10px;
+    }
+
+    .opponent-seat {
+        grid-row: 2;
+    }
+
+    .play-surface {
+        grid-column: 1;
+        grid-row: 3;
+    }
+
+    .player-seat {
+        grid-row: 4;
     }
 
     .seat-identity {
@@ -1115,8 +1241,19 @@
         height: 76%;
     }
 
-    .play-zone {
-        width: 58px;
-        font-size: 8px;
+    .trump-indicator img {
+        width: 52px;
+    }
+
+    .draw-pile {
+        width: 48px;
+    }
+
+    .played-cards {
+        width: 72px;
+    }
+
+    .defense-card:not([hidden]) {
+        transform: translate(20px, 0);
     }
 }
