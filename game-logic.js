@@ -35,9 +35,9 @@ export function shuffleDeck(deck, random = Math.random) {
   return shuffled;
 }
 
-export function createGame(random = Math.random) {
+export function createGame(random = Math.random, mode = "classic") {
   const deck = shuffleDeck(createDeck(), random);
-  const trumpSuit = SUITS[Math.floor(random() * SUITS.length)];
+  const trumpSuit = mode === "japan" ? "diamonds" : SUITS[Math.floor(random() * SUITS.length)];
   const players = {
     player: { hand: deck.splice(0, HAND_SIZE) },
     bot: { hand: deck.splice(0, HAND_SIZE) },
@@ -49,34 +49,104 @@ export function createGame(random = Math.random) {
     drawPile: deck,
     discardPile: [],
     trumpSuit,
+    mode,
     attacker,
     defender: attacker === "player" ? "bot" : "player",
     phase: "attack",
-    attackCard: null,
-    defenseCard: null,
+    attacks: [],
+    defenses: [],
+    attackLimit: 0,
     result: null,
   };
 }
 
-export function canDefend(attackCard, defenseCard, trumpSuit) {
+export function canDefend(attackCard, defenseCard, trumpSuit, mode = "classic") {
   if (attackCard.suit === defenseCard.suit) {
     return defenseCard.rank > attackCard.rank;
+  }
+  if (mode === "japan") {
+    return attackCard.suit !== "spades"
+      && attackCard.suit !== "diamonds"
+      && defenseCard.suit === "diamonds";
   }
   return defenseCard.suit === trumpSuit && attackCard.suit !== trumpSuit;
 }
 
-export function getLegalDefenses(hand, attackCard, trumpSuit) {
-  return hand.filter((card) => canDefend(attackCard, card, trumpSuit));
+function pendingAttackIndex(game) {
+  return game.attacks.findIndex((_, index) => !game.defenses[index]);
+}
+
+function tableCards(game) {
+  return game.attacks.flatMap((attack, index) => (
+    game.defenses[index] ? [attack, game.defenses[index]] : [attack]
+  ));
+}
+
+export function getLegalDefenses(hand, game) {
+  const index = pendingAttackIndex(game);
+  if (index === -1) return [];
+  return hand.filter((card) => canDefend(game.attacks[index], card, game.trumpSuit, game.mode));
+}
+
+export function getLegalAttacks(hand, game) {
+  if (game.phase === "attack") return [...hand];
+  if (game.phase !== "attack-more" || game.attacks.length >= game.attackLimit) return [];
+  const tableRanks = new Set(tableCards(game).map((card) => card.rank));
+  return hand.filter((card) => tableRanks.has(card.rank));
+}
+
+export function getLegalPasses(hand, game) {
+  if (
+    game.mode !== "passing"
+    || game.phase !== "defend"
+    || game.defenses.some(Boolean)
+    || pendingAttackIndex(game) === -1
+    || game.players[game.attacker].hand.length < game.attacks.length + 1
+  ) {
+    return [];
+  }
+
+  const attackRanks = new Set(game.attacks.map((card) => card.rank));
+  const attackSuitsByRank = new Map();
+  for (const card of game.attacks) {
+    const suits = attackSuitsByRank.get(card.rank) ?? new Set();
+    suits.add(card.suit);
+    attackSuitsByRank.set(card.rank, suits);
+  }
+
+  return hand.filter((card) => (
+    attackRanks.has(card.rank)
+    && [...(attackSuitsByRank.get(card.rank) ?? [])].some((suit) => suit !== card.suit)
+  ));
+}
+
+function removeFromHand(hand, cardId) {
+  const cardIndex = hand.findIndex((card) => card.id === cardId);
+  if (cardIndex === -1) return null;
+  return hand.splice(cardIndex, 1)[0];
 }
 
 export function playAttack(game, cardId) {
   if (game.phase !== "attack" || game.result) return false;
-  const hand = game.players[game.attacker].hand;
-  const cardIndex = hand.findIndex((card) => card.id === cardId);
-  if (cardIndex === -1) return false;
+  const card = removeFromHand(game.players[game.attacker].hand, cardId);
+  if (!card) return false;
 
-  [game.attackCard] = hand.splice(cardIndex, 1);
-  game.defenseCard = null;
+  game.attacks = [card];
+  game.defenses = [null];
+  game.attackLimit = game.players[game.defender].hand.length;
+  game.phase = "defend";
+  return true;
+}
+
+export function addAttack(game, cardId) {
+  if (game.phase !== "attack-more" || game.result) return false;
+  const card = getLegalAttacks(game.players[game.attacker].hand, game)
+    .find((candidate) => candidate.id === cardId);
+  if (!card) return false;
+
+  removeFromHand(game.players[game.attacker].hand, cardId);
+  game.attacks.push(card);
+  game.defenses.push(null);
   game.phase = "defend";
   return true;
 }
@@ -88,66 +158,88 @@ function drawToHand(game, playerId) {
   }
 }
 
-function finishExchange(game, wasDefended) {
-  const oldAttacker = game.attacker;
-  const oldDefender = game.defender;
-
-  if (wasDefended) {
-    game.discardPile.push(game.attackCard, game.defenseCard);
-    game.attacker = oldDefender;
-    game.defender = oldAttacker;
-  } else {
-    game.players[oldDefender].hand.push(game.attackCard);
-  }
-
-  game.attackCard = null;
-  game.defenseCard = null;
-  drawToHand(game, game.attacker);
-  drawToHand(game, game.defender);
-
+function updateResult(game) {
+  if (game.drawPile.length > 0) return;
   const [playerCards, botCards] = [
     game.players.player.hand.length,
     game.players.bot.hand.length,
   ];
-  if (game.drawPile.length === 0) {
-    if (playerCards === 0 && botCards === 0) {
-      game.result = { winner: null, message: "Neizšķirts!" };
-    } else if (playerCards === 0 || botCards === 0) {
-      const winner = playerCards === 0 ? "player" : "bot";
-      game.result = {
-        winner,
-        message: winner === "player" ? "Tu uzvarēji!" : "Bots uzvarēja!",
-      };
-    }
+
+  if (playerCards === 0 && botCards === 0) {
+    game.result = { winner: null, message: "Neizšķirts!" };
+  } else if (playerCards === 0 || botCards === 0) {
+    const winner = playerCards === 0 ? "player" : "bot";
+    game.result = {
+      winner,
+      message: winner === "player" ? "Tu uzvarēji!" : "Bots uzvarēja!",
+    };
+  }
+}
+
+function finishExchange(game, wasDefended) {
+  const oldAttacker = game.attacker;
+  const oldDefender = game.defender;
+  const cards = tableCards(game);
+
+  if (wasDefended) {
+    game.discardPile.push(...cards);
+    game.attacker = oldDefender;
+    game.defender = oldAttacker;
+  } else {
+    game.players[oldDefender].hand.push(...cards);
   }
 
+  game.attacks = [];
+  game.defenses = [];
+  game.attackLimit = 0;
+  drawToHand(game, game.attacker);
+  drawToHand(game, game.defender);
+  updateResult(game);
   game.phase = game.result ? "finished" : "attack";
 }
 
 export function playDefense(game, cardId) {
-  if (game.phase !== "defend" || game.result || !game.attackCard) return false;
+  if (game.phase !== "defend" || game.result) return false;
   const hand = game.players[game.defender].hand;
-  const cardIndex = hand.findIndex((card) => card.id === cardId);
-  if (cardIndex === -1 || !canDefend(game.attackCard, hand[cardIndex], game.trumpSuit)) {
-    return false;
-  }
+  const card = getLegalDefenses(hand, game).find((candidate) => candidate.id === cardId);
+  if (!card) return false;
 
-  [game.defenseCard] = hand.splice(cardIndex, 1);
-  game.phase = "defense-reveal";
+  const index = pendingAttackIndex(game);
+  game.defenses[index] = removeFromHand(hand, cardId);
+  game.phase = pendingAttackIndex(game) === -1 ? "attack-more" : "defend";
+  return true;
+}
+
+export function passAttack(game, cardId) {
+  if (game.phase !== "defend" || game.result) return false;
+  const hand = game.players[game.defender].hand;
+  const card = getLegalPasses(hand, game).find((candidate) => candidate.id === cardId);
+  if (!card) return false;
+
+  removeFromHand(hand, cardId);
+  game.attacks.push(card);
+  game.defenses.push(null);
+  const previousAttacker = game.attacker;
+  game.attacker = game.defender;
+  game.defender = previousAttacker;
+  game.attackLimit = game.players[game.defender].hand.length;
+  game.phase = "defend";
   return true;
 }
 
 export function takeAttack(game) {
-  if (game.phase !== "defend" || game.result || !game.attackCard) return false;
+  if (game.phase !== "defend" || game.result || pendingAttackIndex(game) === -1) return false;
   game.phase = "take-reveal";
   return true;
 }
 
+export function finishAttack(game) {
+  if (game.phase !== "attack-more" || game.result || pendingAttackIndex(game) !== -1) return false;
+  finishExchange(game, true);
+  return true;
+}
+
 export function resolveExchange(game) {
-  if (game.phase === "defense-reveal") {
-    finishExchange(game, true);
-    return true;
-  }
   if (game.phase === "take-reveal") {
     finishExchange(game, false);
     return true;

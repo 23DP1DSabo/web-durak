@@ -1,13 +1,20 @@
 import {
+  addAttack,
   chooseRandomCard,
   cardImageFilename,
   createGame,
+  finishAttack,
+  getLegalAttacks,
   getLegalDefenses,
+  getLegalPasses,
+  passAttack,
   playAttack,
   playDefense,
   resolveExchange,
   takeAttack,
 } from "./game-logic.js";
+import winnerCrown from "./images/crown_winner.png";
+import loserJesterHat from "./images/jester_hat_loser.png";
 
 const modeNames = {
   classic: "Klasiskais duraks",
@@ -61,10 +68,17 @@ const playerHand = document.querySelector("#player-hand");
 const opponentHand = document.querySelector("#opponent-hand");
 const playButton = document.querySelector("#play-card");
 const takeButton = document.querySelector("#take-card");
+const passButton = document.querySelector("#pass-card");
+const finishAttackButton = document.querySelector("#finish-attack");
 const statusMessage = document.querySelector("#game-status");
+const playedCards = document.querySelector("#played-cards");
+const resultDialog = document.querySelector("#game-result-dialog");
+const resultIcon = document.querySelector("#game-result-icon");
+const resultTitle = document.querySelector("#game-result-title");
 let game;
 let selectedCardId = null;
 let botTimer = null;
+let passSelectionActive = false;
 
 function imageUrl(card) {
   return cardImages[`./images/PNG-cards-1.3/${card.image}`];
@@ -74,7 +88,7 @@ function cardDescription(card) {
   return `${rankNames[card.rank]} ${suitNames[card.suit]}`;
 }
 
-function renderHand(container, cards, owner, activeCards) {
+function renderHand(container, cards, owner, activeCards, passCards = []) {
   container.replaceChildren();
   for (const card of cards) {
     if (owner === "bot") {
@@ -86,7 +100,7 @@ function renderHand(container, cards, owner, activeCards) {
     }
 
     const button = document.createElement("button");
-    button.className = "hand-card";
+    button.className = `hand-card${passCards.includes(card.id) ? " pass-eligible" : ""}`;
     button.type = "button";
     button.dataset.cardId = card.id;
     button.setAttribute("aria-label", `Atlasīt ${cardDescription(card)}`);
@@ -106,22 +120,27 @@ function renderHand(container, cards, owner, activeCards) {
 
 function currentStatus() {
   if (game.result) return game.result.message;
-  if (game.phase === "defense-reveal") return game.defender === "bot" ? "Bots aizsargājas." : "Aizsardzība nolikta.";
   if (game.phase === "take-reveal") return game.defender === "bot" ? "Bots paņem kārti." : "Tu paņem kārti.";
-  if (game.phase === "attack") {
+  if (passSelectionActive) return "Izvēlies kārti, ar kuru nodot uzbrukumu.";
+  if (game.phase === "attack" || game.phase === "attack-more") {
     return game.attacker === "player" ? "Tavs gājiens — izvēlies uzbrukuma kārti." : "Bots uzbrūk…";
   }
   return game.defender === "player" ? "Aizsargājies vai paņem kārti." : "Bots izvēlas gājienu…";
 }
 
 function render() {
-  const playerActiveCards = game.phase === "attack" && game.attacker === "player"
-    ? game.players.player.hand.map((card) => card.id)
-    : game.phase === "defend" && game.defender === "player"
-      ? getLegalDefenses(game.players.player.hand, game.attackCard, game.trumpSuit).map((card) => card.id)
-      : [];
+  const playerPassCards = game.phase === "defend" && game.defender === "player"
+    ? getLegalPasses(game.players.player.hand, game).map((card) => card.id)
+    : [];
+  const playerActiveCards = passSelectionActive
+    ? playerPassCards
+    : game.attacker === "player" && (game.phase === "attack" || game.phase === "attack-more")
+      ? getLegalAttacks(game.players.player.hand, game).map((card) => card.id)
+      : game.phase === "defend" && game.defender === "player"
+        ? getLegalDefenses(game.players.player.hand, game).map((card) => card.id)
+        : [];
 
-  renderHand(playerHand, game.players.player.hand, "player", playerActiveCards);
+  renderHand(playerHand, game.players.player.hand, "player", playerActiveCards, passSelectionActive ? playerPassCards : []);
   renderHand(opponentHand, game.players.bot.hand, "bot", []);
 
   const trumpCard = { rank: 14, suit: game.trumpSuit, image: cardImageFilename(14, game.trumpSuit) };
@@ -131,34 +150,61 @@ function render() {
   document.querySelector("#draw-pile-count").textContent = `Kavā: ${game.drawPile.length}`;
   document.querySelector("#draw-pile").hidden = game.drawPile.length === 0;
 
-  renderTableCard(game.attackCard, document.querySelector("#attack-card"));
-  renderTableCard(game.defenseCard, document.querySelector("#defense-card"));
+  renderTableCards();
 
   statusMessage.textContent = currentStatus();
-  playButton.disabled = !selectedCardId || !playerActiveCards.includes(selectedCardId);
-  playButton.textContent = game.phase === "defend" ? "Aizsargāties" : "Uzbrukt";
+  playButton.disabled = passSelectionActive || !selectedCardId || !playerActiveCards.includes(selectedCardId);
+  playButton.textContent = game.phase === "defend" ? "Aizsargāties" : game.phase === "attack-more" ? "Pievienot kārti" : "Uzbrukt";
   playButton.hidden = !(
-    (game.phase === "attack" && game.attacker === "player")
-    || (game.phase === "defend" && game.defender === "player")
+    !passSelectionActive
+    && ((game.phase === "attack" && game.attacker === "player")
+      || (game.phase === "attack-more" && game.attacker === "player")
+      || (game.phase === "defend" && game.defender === "player"))
   );
   takeButton.hidden = game.phase !== "defend" || game.defender !== "player";
   takeButton.disabled = game.phase !== "defend" || game.defender !== "player";
+  passButton.hidden = game.phase !== "defend" || game.defender !== "player" || game.mode !== "passing";
+  passButton.disabled = passSelectionActive
+    ? !selectedCardId || !playerPassCards.includes(selectedCardId)
+    : playerPassCards.length === 0;
+  passButton.textContent = passSelectionActive
+    ? selectedCardId ? "Pādoties ar izvēlēto kārti" : "Atcelt izvēli"
+    : "Pādoties";
+  finishAttackButton.hidden = game.phase !== "attack-more" || game.attacker !== "player";
 
   if (game.result) {
-    document.querySelector("#restart-game").hidden = false;
+    showResult();
   }
   scheduleBotTurn();
 }
 
-function renderTableCard(card, imageElement) {
-  if (!card) {
-    imageElement.hidden = true;
-    imageElement.removeAttribute("src");
-    return;
+function renderTableCards() {
+  playedCards.replaceChildren();
+  game.attacks.forEach((attack, index) => {
+    const pair = document.createElement("div");
+    pair.className = "played-card-pair";
+    pair.append(createTableCard(attack, "attack-card"));
+    if (game.defenses[index]) pair.append(createTableCard(game.defenses[index], "defense-card"));
+    playedCards.append(pair);
+  });
+}
+
+function createTableCard(card, type) {
+  const image = document.createElement("img");
+  image.className = `played-card ${type}`;
+  image.src = imageUrl(card);
+  image.alt = cardDescription(card);
+  return image;
+}
+
+function showResult() {
+  resultTitle.textContent = game.result.message;
+  resultIcon.hidden = !game.result.winner;
+  if (game.result.winner) {
+    resultIcon.src = game.result.winner === "player" ? winnerCrown : loserJesterHat;
+    resultIcon.alt = game.result.winner === "player" ? "Kronis — uzvara" : "Jestera cepure — zaudējums";
   }
-  imageElement.src = imageUrl(card);
-  imageElement.alt = cardDescription(card);
-  imageElement.hidden = false;
+  if (!resultDialog.open) resultDialog.showModal();
 }
 
 function schedule(delay, callback) {
@@ -170,7 +216,11 @@ function schedule(delay, callback) {
 }
 
 function completePlayerAttack() {
-  if (!selectedCardId || !playAttack(game, selectedCardId)) return;
+  if (!selectedCardId) return;
+  const played = game.phase === "attack"
+    ? playAttack(game, selectedCardId)
+    : addAttack(game, selectedCardId);
+  if (!played) return;
   selectedCardId = null;
   render();
 }
@@ -186,9 +236,35 @@ function completePlayerTake() {
   if (takeAttack(game)) render();
 }
 
+function completePlayerPass() {
+  if (passSelectionActive) {
+    if (selectedCardId && passAttack(game, selectedCardId)) {
+      selectedCardId = null;
+      passSelectionActive = false;
+      render();
+      return;
+    }
+    if (!selectedCardId) {
+      passSelectionActive = false;
+      render();
+    }
+    return;
+  }
+
+  const legalPasses = getLegalPasses(game.players.player.hand, game);
+  if (legalPasses.length === 1 && passAttack(game, legalPasses[0].id)) {
+    selectedCardId = null;
+    render();
+  } else if (legalPasses.length > 1) {
+    passSelectionActive = true;
+    selectedCardId = null;
+    render();
+  }
+}
+
 function scheduleBotTurn() {
   if (botTimer !== null || game.result) return;
-  if (game.phase === "defense-reveal" || game.phase === "take-reveal") {
+  if (game.phase === "take-reveal") {
     schedule(1800, () => {
       resolveExchange(game);
       render();
@@ -201,13 +277,24 @@ function scheduleBotTurn() {
       if (card) playAttack(game, card.id);
       render();
     });
+  } else if (game.phase === "attack-more" && game.attacker === "bot") {
+    schedule(1200, () => {
+      const card = chooseRandomCard(getLegalAttacks(game.players.bot.hand, game));
+      if (card) addAttack(game, card.id);
+      else finishAttack(game);
+      render();
+    });
   } else if (game.phase === "defend" && game.defender === "bot") {
     schedule(1200, () => {
-      const legalCards = getLegalDefenses(game.players.bot.hand, game.attackCard, game.trumpSuit);
-      const options = [...legalCards, null];
-      const choice = chooseRandomCard(options);
-      if (choice) playDefense(game, choice.id);
-      else takeAttack(game);
+      const passCards = getLegalPasses(game.players.bot.hand, game);
+      if (passCards.length > 0 && Math.random() < 0.35) {
+        passAttack(game, chooseRandomCard(passCards).id);
+      } else {
+        const legalCards = getLegalDefenses(game.players.bot.hand, game);
+        const choice = chooseRandomCard([...legalCards, null]);
+        if (choice) playDefense(game, choice.id);
+        else takeAttack(game);
+      }
       render();
     });
   }
@@ -230,17 +317,26 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
   document.querySelector("#return-to-room").href = returnUrl;
 
   playButton.addEventListener("click", () => {
-    if (game.phase === "attack") completePlayerAttack();
+    if (game.phase === "attack" || game.phase === "attack-more") completePlayerAttack();
     else completePlayerDefense();
   });
   takeButton.addEventListener("click", () => {
     completePlayerTake();
   });
+  passButton.addEventListener("click", () => {
+    completePlayerPass();
+  });
+  finishAttackButton.addEventListener("click", () => {
+    selectedCardId = null;
+    if (finishAttack(game)) render();
+  });
   document.querySelector("#restart-game").addEventListener("click", () => {
     if (botTimer !== null) window.clearTimeout(botTimer);
     botTimer = null;
     selectedCardId = null;
-    game = createGame();
+    passSelectionActive = false;
+    resultDialog.close();
+    game = createGame(Math.random, mode);
     render();
   });
 
@@ -249,6 +345,6 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
     sessionStorage.setItem(`durak-room:${roomCode}`, JSON.stringify(roomState));
   }
 
-  game = createGame();
+  game = createGame(Math.random, mode);
   render();
 }

@@ -39,13 +39,12 @@
 
             <section class="play-surface" aria-label="Kāršu spēles zona">
                 <div id="played-cards" class="played-cards" aria-label="Kārtis uz galda" aria-live="polite">
-                    <img id="attack-card" class="played-card attack-card" alt="" hidden>
-                    <img id="defense-card" class="played-card defense-card" alt="" hidden>
                 </div>
                 <div id="game-actions" class="game-actions">
                     <button id="play-card" type="button" disabled>Uzbrukt</button>
                     <button id="take-card" type="button" hidden>Paņemt kārti</button>
-                    <button id="restart-game" type="button" hidden>Jauna spēle</button>
+                    <button id="pass-card" type="button" hidden>Padot</button>
+                    <button id="finish-attack" type="button" hidden>Pabeigt uzbrukumu</button>
                 </div>
             </section>
 
@@ -60,6 +59,11 @@
                 <div id="player-hand" class="card-hand player-hand" aria-label="Tavas kārtis"></div>
             </section>
         </main>
+        <dialog id="game-result-dialog" class="game-result-dialog" aria-labelledby="game-result-title">
+            <img id="game-result-icon" class="game-result-icon" alt="" hidden>
+            <h2 id="game-result-title"></h2>
+            <button id="restart-game" type="button">Jauna spēle</button>
+        </dialog>
         <script type="module" src="../game-table.js"></script>
     </body>
 </html>
