@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -12,26 +7,92 @@ datasource db {
   provider = "mysql"
 }
 
-model User { 
-  id    Int     @id @default(autoincrement()) 
-  email String  @unique
-  name  String?
-  posts Post[]
-  passwordHash String
-  sessions Session[]
-} 
-model Post { 
-  id        Int     @id @default(autoincrement()) 
-  title     String
-  content   String? @db.Text
-  published Boolean @default(false) 
-  author    User    @relation(fields: [authorId], references: [id]) 
-  authorId  Int
+enum Theme {
+  LIGHT
+  DARK
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+enum MatchResult {
+  WIN
+  DURAK
+}
+
+model User {
+  id                  BigInt        @id @default(autoincrement()) @map("lietotaja_id")
+  username            String        @unique @map("lietotajvards") @db.VarChar(50)
+  email               String        @unique @map("epasts") @db.VarChar(255)
+  passwordHash        String        @map("paroles_jaucejvertiba") @db.VarChar(255)
+  name                String        @map("vards") @db.VarChar(50)
+  avatar              String?       @map("avatars") @db.VarChar(255)
+  theme               Theme         @default(DARK) @map("tema")
+  role                UserRole      @default(USER) @map("tiesibas")
+  status              UserStatus    @default(ACTIVE) @map("statuss")
+  createdAt           DateTime      @default(now()) @map("izveidots") @db.DateTime(3)
+  sentFriendships     Friendship[]  @relation("FriendshipSender")
+  receivedFriendships Friendship[]  @relation("FriendshipRecipient")
+  matchPlayers        MatchPlayer[]
+  sessions            Session[]
+
+  @@map("Lietotaji")
+}
+
+model Friendship {
+  id          BigInt           @id @default(autoincrement()) @map("draudzibas_id")
+  senderId    BigInt           @map("nosutitaja_id")
+  recipientId BigInt           @map("sanemeja_id")
+  status      FriendshipStatus @default(PENDING) @map("statuss")
+  createdAt   DateTime         @default(now()) @map("izveidots") @db.DateTime(3)
+  sender      User             @relation("FriendshipSender", fields: [senderId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  recipient   User             @relation("FriendshipRecipient", fields: [recipientId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([senderId, recipientId])
+  @@index([recipientId, status])
+  @@map("Draudzibas")
+}
+
+model Match {
+  id        BigInt        @id @default(autoincrement()) @map("speles_id")
+  mode      String        @map("speles_rezims") @db.VarChar(30)
+  startedAt DateTime      @map("sakums") @db.DateTime(3)
+  endedAt   DateTime      @map("beigas") @db.DateTime(3)
+  players   MatchPlayer[]
+
+  @@map("Speles")
+}
+
+model MatchPlayer {
+  id        BigInt      @id @default(autoincrement()) @map("speletaja_id")
+  matchId   BigInt      @map("speles_id")
+  userId    BigInt?     @map("lietotaja_id")
+  guestName String?     @map("viesa_vards") @db.VarChar(50)
+  result    MatchResult @map("rezultats")
+  match     Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user      User?       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([matchId, userId])
+  @@index([userId])
+  @@map("Speles_speletaji")
 }
 
 model Session {
   tokenHash String   @id
-  userId    Int
+  userId    BigInt
   expiresAt DateTime
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

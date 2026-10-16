@@ -1,31 +1,13 @@
-import { prisma } from "./lib/prisma";
+import { prisma } from "./lib/prisma.ts";
 
 async function main() {
-  const user = await prisma.user.create({
-    data: {
-      name: "Alise",
-      email: "alise@prisma.com",
-      posts: {
-        create: {
-          title: "Hello World",
-          content: "This is my first post!",
-          published: true,
-        },
-      },
-    },
-    include: {
-      posts: true,
-    },
+  // Read-only schema check; do not seed shared databases with demo accounts.
+  console.log({
+    users: await prisma.user.count(),
+    friendships: await prisma.friendship.count(),
+    matches: await prisma.match.count(),
+    matchPlayers: await prisma.matchPlayer.count(),
   });
-  console.log("Created user:", user);
-
-  // Fetch all users with their posts
-  const allUsers = await prisma.user.findMany({
-    include: {
-      posts: true,
-    },
-  });
-  console.log("All users:", JSON.stringify(allUsers, null, 2));
 }
 
 main()

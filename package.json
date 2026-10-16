@@ -16,10 +16,14 @@
   "main": "app.js",
   "scripts": {
     "dev": "vite",
-    "server": "tsx app.js",
+    "server": "tsx server.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:db": "tsx tests/database-check.mjs",
+    "test:migrations": "node tests/migration-safety.mjs"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "^7.10.0",
