@@ -779,7 +779,8 @@
     min-height: 100svh;
     flex-direction: column;
     margin: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     color: #f5ecd8;
     background: url("../images/background-to-be-used-during-the-game.jpg") center / cover fixed no-repeat;
     font-family: Georgia, "Palatino Linotype", serif;
@@ -846,11 +847,11 @@
     box-sizing: border-box;
     display: grid;
     grid-template-columns: minmax(130px, 180px) minmax(0, 1fr);
-    grid-template-rows: min-content minmax(200px, 1fr) min-content;
+    grid-template-rows: min-content minmax(200px, 1fr) min-content auto;
     gap: clamp(8px, 1.6vh, 18px);
     width: min(100%, 1500px);
-    min-height: 0;
-    flex: 1;
+    min-height: calc(100svh - 68px);
+    flex: 1 0 auto;
     margin: 0 auto;
     padding: clamp(12px, 2vh, 24px) clamp(14px, 4vw, 64px);
 }
@@ -996,10 +997,66 @@
 
 .opponent-seat {
     grid-row: 1;
+    grid-template-rows: auto auto;
+}
+
+.opponent-seat .seat-identity {
+    grid-row: 1 / 3;
+}
+
+.opponent-clock {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+}
+
+.opponent-hand {
+    grid-column: 2;
+    grid-row: 2;
 }
 
 .player-seat {
     grid-row: 3;
+}
+
+.player-clock {
+    box-sizing: border-box;
+    display: flex;
+    grid-column: 2;
+    grid-row: 4;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    justify-self: center;
+    min-width: 142px;
+    padding: 7px 15px;
+    border: 2px ridge #9b7140;
+    color: #fff0cf;
+    background: linear-gradient(rgb(23 10 3 / 43%), rgb(23 10 3 / 43%)), url("../images/long-wood.jpg") center / cover;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 35%), inset 0 0 0 1px rgb(242 207 141 / 35%);
+    font: 600 12px/1.2 "Trebuchet MS", sans-serif;
+}
+
+.opponent-seat .opponent-clock {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.player-clock time {
+    min-width: 46px;
+    color: #fff2ce;
+    font: 700 17px/1 Georgia, "Palatino Linotype", serif;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.player-clock.is-low {
+    border-color: #d65f45;
+    color: #ffe0d4;
+}
+
+.player-clock.is-low time {
+    color: #ffd0c0;
 }
 
 .table-status {
@@ -1138,14 +1195,23 @@
 
 .game-result-dialog {
     box-sizing: border-box;
-    width: min(420px, calc(100vw - 32px));
-    padding: 28px 32px 30px;
-    border: 7px ridge #8d5b2e;
+    display: flex;
+    width: min(460px, calc(100vw - 32px));
+    max-width: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
     color: #fff0cf;
-    background: linear-gradient(rgb(27 11 3 / 46%), rgb(27 11 3 / 46%)), url("../images/long-wood.jpg") center / cover;
-    box-shadow: 0 18px 60px rgb(0 0 0 / 65%), inset 0 0 0 2px rgb(242 207 141 / 45%);
+    background: transparent;
     font-family: Georgia, "Palatino Linotype", serif;
     text-align: center;
+}
+
+.game-result-dialog:not([open]) {
+    display: none;
 }
 
 .game-result-dialog::backdrop {
@@ -1162,9 +1228,9 @@
 
 .game-result-icon {
     display: block;
-    width: min(210px, 55vw);
-    max-height: 150px;
-    margin: -54px auto 10px;
+    width: min(180px, 48vw);
+    max-height: 138px;
+    margin: 0 auto -8px;
     object-fit: contain;
     filter: drop-shadow(0 5px 5px rgb(0 0 0 / 55%));
 }
@@ -1173,7 +1239,28 @@
     display: none;
 }
 
-.game-result-dialog button {
+.game-result-sign {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 28px 32px 30px;
+    border: 7px ridge #8d5b2e;
+    background: linear-gradient(rgb(27 11 3 / 46%), rgb(27 11 3 / 46%)), url("../images/long-wood.jpg") center / cover;
+    box-shadow: 0 18px 60px rgb(0 0 0 / 65%), inset 0 0 0 2px rgb(242 207 141 / 45%);
+}
+
+.game-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.game-result-dialog button,
+.game-result-menu-link {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 42px;
     padding: 9px 18px;
     border: 1px solid #d7b66d;
@@ -1183,7 +1270,13 @@
     cursor: pointer;
 }
 
-.game-result-dialog button:focus-visible {
+.game-result-menu-link {
+    color: #fff0cf;
+    text-decoration: none;
+}
+
+.game-result-dialog button:focus-visible,
+.game-result-menu-link:focus-visible {
     outline: 3px solid #e2bd70;
     outline-offset: 3px;
 }
@@ -1398,7 +1491,7 @@
 
     .table-stage {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: min-content min-content minmax(180px, 1fr) min-content;
+        grid-template-rows: min-content min-content minmax(180px, 1fr) min-content auto;
         gap: 8px;
         min-height: calc(100svh - 88px);
         padding: 16px 12px 20px;
@@ -1433,6 +1526,21 @@
 
     .player-seat {
         grid-row: 4;
+    }
+
+    .opponent-seat .seat-identity {
+        grid-row: 1 / 3;
+    }
+
+    .opponent-seat .opponent-clock {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .player-clock {
+        grid-column: 1;
+        grid-row: 5;
+        margin-top: 2px;
     }
 
     .seat-identity {
@@ -1494,7 +1602,7 @@
         transform: translate(16px, 12px);
     }
 
-    .game-result-dialog {
+    .game-result-sign {
         padding: 24px 20px;
     }
 
@@ -1510,3 +1618,444 @@
     }
 }
 
+
+.rules-panel,
+.settings-panel {
+    width: min(100%, clamp(420px, 58vw, 900px)) !important;
+}
+
+.rules-sections,
+#account-settings {
+    display: grid;
+    gap: 22px;
+}
+
+.rules-section,
+.settings-section {
+    padding: clamp(16px, 2.5vw, 26px);
+    border: 1px solid rgb(232 216 173 / 35%);
+    background: rgb(23 59 43 / 24%);
+    box-shadow: inset 0 0 18px rgb(20 10 5 / 24%);
+}
+
+.rules-section h3,
+.settings-section h3 {
+    margin: 0 0 12px;
+    color: #e2bd70;
+    font-size: clamp(19px, 2vw, 25px);
+}
+
+.rules-section h4 {
+    margin: 18px 0 5px;
+    color: #f3e8c9;
+    font-size: 17px;
+}
+
+.rules-section p,
+.rules-section li,
+.settings-section p,
+#settings-sign-in {
+    color: #f3e8c9;
+    font-size: 15px;
+    line-height: 1.65;
+}
+
+.rules-section p {
+    margin: 8px 0;
+}
+
+.rules-section ol {
+    display: grid;
+    gap: 10px;
+    padding-left: 24px;
+}
+
+.settings-panel #settings-status {
+    min-height: 1.5em;
+    margin: 0 0 14px;
+    color: #d9f0cc;
+}
+
+.settings-panel #settings-status[data-state="error"] {
+    color: #ffd2bc;
+}
+
+.settings-panel #settings-sign-in a {
+    color: #f3d28c;
+}
+
+.settings-section form {
+    display: grid;
+    gap: 14px;
+}
+
+.settings-section form button {
+    justify-self: start;
+}
+
+.settings-section small {
+    color: #e8d8ad;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.theme-options {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.theme-options legend {
+    margin-bottom: 12px;
+    color: #f3e8c9;
+}
+
+.theme-options label {
+    position: relative;
+    cursor: pointer;
+}
+
+.theme-options input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.theme-options label span {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border: 1px solid rgb(232 216 173 / 45%);
+    color: #fff0cf;
+    background: rgb(23 59 43 / 38%);
+}
+
+.theme-options input:checked + span {
+    border-color: #e2bd70;
+    box-shadow: inset 0 0 0 2px rgb(226 189 112 / 35%);
+}
+
+.theme-options input:focus-visible + span {
+    outline: 3px solid #e2bd70;
+    outline-offset: 3px;
+}
+
+.settings-note {
+    margin-bottom: 0;
+    font-size: 13px !important;
+}
+
+body[data-theme="light"] #frontpage-content {
+    color: #243329;
+    background: linear-gradient(135deg, #f2f5ec, #dce8da);
+}
+
+body[data-theme="light"] #frontpage-content::before {
+    border-color: #91a98d;
+}
+
+body[data-theme="light"] .game-rooms,
+body[data-theme="light"] #side-navigation-menu {
+    border-color: #879b7e;
+    outline-color: #bdcbb5;
+    color: #26352a;
+    background: #fffdf6;
+    box-shadow: 0 8px 24px rgb(33 57 38 / 14%);
+    clip-path: none;
+}
+
+body[data-theme="light"] .game-rooms h2,
+body[data-theme="light"] .matchmaking-header h1 {
+    color: #263d2e;
+    text-shadow: none;
+}
+
+body[data-theme="light"] .game-button,
+body[data-theme="light"] #side-navigation-menu li {
+    border-color: #728b71;
+    color: #fff;
+    background: #456b4e;
+    background-image: none;
+    text-shadow: none;
+}
+
+body[data-theme="light"] #side-navigation-menu a {
+    color: #fff;
+}
+
+body.auth-page[data-theme="light"] {
+    color: #26352a;
+    background: #edf2e9;
+}
+
+body.auth-page[data-theme="light"] #auth-panel,
+body.auth-page[data-theme="light"] .room-side-panel {
+    border-color: #8a9d81;
+    outline-color: #c1ceb8;
+    color: #26352a;
+    background: #fffdf7;
+    box-shadow: 0 10px 28px rgb(33 57 38 / 14%);
+    clip-path: none;
+}
+
+body.auth-page[data-theme="light"] .auth-header h1,
+body.auth-page[data-theme="light"] .content-panel h2,
+body.auth-page[data-theme="light"] .auth-page form h2,
+body.auth-page[data-theme="light"] #account h2,
+body.auth-page[data-theme="light"] .room-side-panel h2 {
+    color: #263d2e;
+    text-shadow: none;
+}
+
+body.auth-page[data-theme="light"] .auth-page button,
+body.auth-page[data-theme="light"] button,
+body.auth-page[data-theme="light"] .auth-back-link {
+    border-color: #728b71;
+    color: #fff;
+    background: #456b4e;
+    background-image: none;
+    text-shadow: none;
+}
+
+body.auth-page[data-theme="light"] .auth-field label,
+body.auth-page[data-theme="light"] .rules-section h4,
+body.auth-page[data-theme="light"] .theme-options legend,
+body.auth-page[data-theme="light"] .rules-section p,
+body.auth-page[data-theme="light"] .rules-section li,
+body.auth-page[data-theme="light"] .settings-section p,
+body.auth-page[data-theme="light"] #settings-sign-in,
+body.auth-page[data-theme="light"] .theme-options label span {
+    color: #334438;
+}
+
+body.auth-page[data-theme="light"] .rules-section,
+body.auth-page[data-theme="light"] .settings-section,
+body.auth-page[data-theme="light"] .theme-options label span,
+body.auth-page[data-theme="light"] .player-list-item {
+    border-color: #c5d0bd;
+    background: #f5f7f0;
+    box-shadow: none;
+}
+
+body.auth-page[data-theme="light"] .rules-section h3,
+body.auth-page[data-theme="light"] .settings-section h3 {
+    color: #456b4e;
+}
+
+body.auth-page[data-theme="light"] .settings-section small,
+body.auth-page[data-theme="light"] .room-description,
+body.auth-page[data-theme="light"] .room-setting-status,
+body.auth-page[data-theme="light"] .player-role {
+    color: #526653;
+}
+
+body.auth-page[data-theme="light"] .theme-options input:checked + span {
+    border-color: #456b4e;
+    box-shadow: inset 0 0 0 2px rgb(69 107 78 / 20%);
+}
+
+body[data-theme="light"] .room-dialog {
+    border-color: #8a9d81;
+    outline-color: #c1ceb8;
+    color: #26352a;
+    background: #fffdf7;
+}
+
+body[data-theme="light"] .room-dialog button {
+    border-color: #728b71;
+    color: #fff;
+    background: #456b4e;
+    background-image: none;
+}
+
+body[data-theme="light"] .room-dialog .room-code {
+    border-color: #c5d0bd;
+    color: #26352a;
+    background: #f5f7f0;
+}
+
+body.auth-page[data-theme="light"] .settings-panel #settings-status,
+body.auth-page[data-theme="light"] .settings-panel #settings-sign-in a {
+    color: #315d3a;
+}
+
+body.auth-page[data-theme="light"] .settings-panel #settings-status[data-state="error"] {
+    color: #a33425;
+}
+
+body.game-table-page[data-theme="light"] {
+    color: #26352a;
+    background: linear-gradient(145deg, #e7eee2, #cbdac9);
+}
+
+body.game-table-page[data-theme="light"] .game-table-header {
+    border-color: #a6b6a1;
+    background: #f8faf5;
+}
+
+body.game-table-page[data-theme="light"] .game-brand,
+body.game-table-page[data-theme="light"] .match-details,
+body.game-table-page[data-theme="light"] .match-details strong,
+body.game-table-page[data-theme="light"] .game-exit-link,
+body.game-table-page[data-theme="light"] .seat-identity h1,
+body.game-table-page[data-theme="light"] .seat-identity h2,
+body.game-table-page[data-theme="light"] .table-status {
+    color: #263d2e;
+    text-shadow: none;
+}
+
+body.game-table-page[data-theme="light"] .game-exit-link,
+body.game-table-page[data-theme="light"] .player-clock,
+body.game-table-page[data-theme="light"] .game-actions button {
+    border-color: #829982;
+    color: #263d2e;
+    background: #f8faf5;
+    background-image: none;
+}
+
+body.game-table-page[data-theme="light"] .player-clock time,
+body.game-table-page[data-theme="light"] .seat-identity p {
+    color: #405744;
+}
+
+body.game-table-page[data-theme="dark"] {
+    color: #e4e9e5;
+    background: #12171b;
+}
+
+body.game-table-page[data-theme="dark"] .game-table-header {
+    border-color: #384249;
+    background: #20282e;
+}
+
+body.game-table-page[data-theme="dark"] .game-brand,
+body.game-table-page[data-theme="dark"] .match-details,
+body.game-table-page[data-theme="dark"] .match-details strong,
+body.game-table-page[data-theme="dark"] .game-exit-link,
+body.game-table-page[data-theme="dark"] .seat-identity h1,
+body.game-table-page[data-theme="dark"] .seat-identity h2,
+body.game-table-page[data-theme="dark"] .table-status,
+body.game-table-page[data-theme="dark"] .player-clock,
+body.game-table-page[data-theme="dark"] .player-clock time {
+    color: #e4e9e5;
+    text-shadow: none;
+}
+
+body.game-table-page[data-theme="dark"] .game-exit-link,
+body.game-table-page[data-theme="dark"] .player-clock,
+body.game-table-page[data-theme="dark"] .game-actions button {
+    border-color: #56636a;
+    background: #273238;
+    background-image: none;
+}
+
+body[data-theme="dark"] #frontpage-content,
+body.auth-page[data-theme="dark"] {
+    color: #e4e9e5;
+    background: #12171b;
+}
+
+body[data-theme="dark"] #frontpage-content::before {
+    border-color: #46525a;
+}
+
+body[data-theme="dark"] .game-rooms,
+body[data-theme="dark"] #side-navigation-menu,
+body.auth-page[data-theme="dark"] #auth-panel,
+body.auth-page[data-theme="dark"] .room-side-panel {
+    border-color: #46525a;
+    outline-color: #303a40;
+    color: #e4e9e5;
+    background: #20282e;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+    clip-path: none;
+}
+
+body[data-theme="dark"] .game-rooms h2,
+body[data-theme="dark"] .matchmaking-header h1,
+body.auth-page[data-theme="dark"] .auth-header h1,
+body.auth-page[data-theme="dark"] .content-panel h2,
+body.auth-page[data-theme="dark"] .auth-page form h2,
+body.auth-page[data-theme="dark"] #account h2,
+body.auth-page[data-theme="dark"] .room-side-panel h2 {
+    color: #e4e9e5;
+    text-shadow: none;
+}
+
+body[data-theme="dark"] .game-button,
+body[data-theme="dark"] #side-navigation-menu li,
+body.auth-page[data-theme="dark"] button,
+body.auth-page[data-theme="dark"] .auth-back-link {
+    border-color: #56636a;
+    color: #e4e9e5;
+    background: #35444b;
+    background-image: none;
+    text-shadow: none;
+}
+
+body.auth-page[data-theme="dark"] .rules-section,
+body.auth-page[data-theme="dark"] .settings-section,
+body.auth-page[data-theme="dark"] .theme-options label span,
+body.auth-page[data-theme="dark"] .player-list-item {
+    border-color: #46525a;
+    color: #e4e9e5;
+    background: #182126;
+    box-shadow: none;
+}
+
+body.auth-page[data-theme="dark"] .rules-section p,
+body.auth-page[data-theme="dark"] .rules-section li,
+body.auth-page[data-theme="dark"] .settings-section p,
+body.auth-page[data-theme="dark"] #settings-sign-in,
+body.auth-page[data-theme="dark"] .theme-options legend,
+body.auth-page[data-theme="dark"] .theme-options label span,
+body.auth-page[data-theme="dark"] .auth-field label,
+body.auth-page[data-theme="dark"] .rules-section h4,
+body.auth-page[data-theme="dark"] .settings-section small,
+body.auth-page[data-theme="dark"] .room-description,
+body.auth-page[data-theme="dark"] .room-setting-status,
+body.auth-page[data-theme="dark"] .player-role {
+    color: #d0d8d2;
+}
+
+body.auth-page[data-theme="dark"] .rules-section h3,
+body.auth-page[data-theme="dark"] .settings-section h3 {
+    color: #d1b878;
+}
+
+body.auth-page[data-theme="dark"] .settings-panel #settings-status,
+body.auth-page[data-theme="dark"] .settings-panel #settings-sign-in a {
+    color: #b8d8bd;
+}
+
+body.auth-page[data-theme="dark"] .settings-panel #settings-status[data-state="error"] {
+    color: #ffb8a7;
+}
+
+body.auth-page[data-theme="dark"] .theme-options input:checked + span {
+    border-color: #d1b878;
+    box-shadow: inset 0 0 0 2px rgb(209 184 120 / 20%);
+}
+
+body[data-theme="dark"] .room-dialog {
+    border-color: #46525a;
+    outline-color: #303a40;
+    color: #e4e9e5;
+    background: #20282e;
+}
+
+body[data-theme="dark"] .room-dialog button {
+    border-color: #56636a;
+    color: #e4e9e5;
+    background: #35444b;
+    background-image: none;
+}
+
+body[data-theme="dark"] .room-dialog .room-code {
+    border-color: #46525a;
+    color: #e4e9e5;
+    background: #182126;
+}

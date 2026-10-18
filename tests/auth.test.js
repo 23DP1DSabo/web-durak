@@ -11,6 +11,15 @@ beforeEach(async () => {
         const user = { id: BigInt(users.length + 1), status: "ACTIVE", role: "USER", theme: "DARK", avatar: null, ...data }; users.push(user); return user;
       },
       findUnique: async ({ where }) => users.find((u) => u.email === where.email),
+      update: async ({ where, data }) => {
+        const user = users.find((candidate) => candidate.id === where.id);
+        if (!user) throw new Error("User not found");
+        if (data.username && users.some((candidate) => candidate.id !== user.id && candidate.username === data.username)) {
+          throw { code: "P2002" };
+        }
+        Object.assign(user, data);
+        return user;
+      },
     },
     session: {
       create: vi.fn(async ({ data }) => { sessions.set(data.tokenHash, data); return data; }),
@@ -96,6 +105,11 @@ test("blocks cross-origin requests and accepts configured origin", async () => {
   vi.stubEnv("APP_ORIGIN", "http://localhost:3000");
   expect((await post("register", credentials, null, { origin: "https://other.example" })).status).toBe(403);
   expect((await post("register", credentials, null, { "sec-fetch-site": "cross-site" })).status).toBe(403);
+  expect((await fetch(`${base}/api/auth/theme`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", origin: "https://other.example" },
+    body: JSON.stringify({ theme: "LIGHT" }),
+  })).status).toBe(403);
   expect((await post("register", credentials, null, { origin: "http://localhost:3000" })).status).toBe(201);
 });
 test("limits repeated attempts and returns JSON for malformed requests", async () => {
@@ -130,4 +144,54 @@ test("banned accounts cannot sign in or reuse an existing session", async () => 
   expect((await post("login")).status).toBe(403);
   expect((await me(cookie)).status).toBe(401);
   expect(sessions.size).toBe(0);
+});
+
+test("account settings require authentication and update username and theme", async () => {
+  expect((await fetch(`${base}/api/auth/username`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: "updated" }),
+  })).status).toBe(401);
+
+  const cookie = cookieOf(await post("register"));
+  await post("register", { ...credentials, email: "other@example.com", username: "taken" });
+  const renamed = await fetch(`${base}/api/auth/username`, {
+    method: "PATCH", headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ username: "updated_1" }),
+  });
+  expect(renamed.status).toBe(200);
+  expect((await renamed.json()).user.username).toBe("updated_1");
+
+  expect((await fetch(`${base}/api/auth/username`, {
+    method: "PATCH", headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ username: "taken" }),
+  })).status).toBe(409);
+  expect((await fetch(`${base}/api/auth/username`, {
+    method: "PATCH", headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ username: "not valid" }),
+  })).status).toBe(400);
+
+  const themed = await fetch(`${base}/api/auth/theme`, {
+    method: "PATCH", headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ theme: "LIGHT" }),
+  });
+  expect(themed.status).toBe(200);
+  expect((await themed.json()).user.theme).toBe("LIGHT");
+  expect((await fetch(`${base}/api/auth/theme`, {
+    method: "PATCH", headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ theme: "UNKNOWN" }),
+  })).status).toBe(400);
+});
+
+test("password change verifies the current password and accepts only a valid new one", async () => {
+  const cookie = cookieOf(await post("register"));
+  const change = (currentPassword, newPassword) => fetch(`${base}/api/auth/password`, {
+    method: "PATCH", headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
+  expect((await change("incorrect password", "another strong password")).status).toBe(400);
+  expect((await change(credentials.password, "short")).status).toBe(400);
+  expect((await change(credentials.password, "another strong password")).status).toBe(200);
+  expect((await post("login", credentials)).status).toBe(401);
+  expect((await post("login", { ...credentials, password: "another strong password" })).status).toBe(200);
 });

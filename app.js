@@ -20,7 +20,7 @@ export function createAuthApp(prisma) {
   authApp.disable("x-powered-by");
   authApp.use("/api/auth", (req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
-    if (req.method === "POST" && (req.get("sec-fetch-site") === "cross-site"
+    if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method) && (req.get("sec-fetch-site") === "cross-site"
       || (req.get("origin") && req.get("origin") !== (process.env.APP_ORIGIN || `${req.protocol}://${req.get("host")}`)))) {
       return res.status(403).json({ error: "Pieprasījuma izcelsme nav atļauta." });
     }
@@ -77,6 +77,29 @@ export function createAuthApp(prisma) {
       .find((part) => part.startsWith("durak_session="));
     const token = sessionCookie?.slice("durak_session=".length);
     return /^[a-f0-9]{64}$/.test(token || "") ? token : null;
+  }
+
+  async function getAuthenticatedUser(req, res) {
+    const token = getSessionToken(req);
+    if (!token) {
+      clearSessionCookie(res);
+      res.status(401).json({ error: "Jūs neesat pieslēdzies." });
+      return null;
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { tokenHash: hashToken(token) },
+      include: { user: true },
+    });
+    if (!session || session.expiresAt <= new Date() || session.user.status !== "ACTIVE") {
+      if (session) {
+        await prisma.session.deleteMany({ where: { tokenHash: session.tokenHash } });
+      }
+      clearSessionCookie(res);
+      res.status(401).json({ error: "Jūs neesat pieslēdzies." });
+      return null;
+    }
+    return session.user;
   }
 
   function publicUser(user) {
@@ -229,6 +252,81 @@ export function createAuthApp(prisma) {
     } catch (error) {
       console.error("Logout failed:", error);
       return res.status(500).json({ error: "Neizdevās izrakstīties." });
+    }
+  });
+
+  authApp.patch("/api/auth/username", async (req, res) => {
+    try {
+      const user = await getAuthenticatedUser(req, res);
+      if (!user) return;
+
+      const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
+      if (!/^[\p{L}\p{N}_]{1,50}$/u.test(username)) {
+        return res.status(400).json({
+          error: "Lietotājvārdā atļauti burti, cipari un pasvītrojums (līdz 50 rakstzīmēm).",
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: { username },
+      });
+      return res.json({ user: publicUser(updatedUser) });
+    } catch (error) {
+      if (error?.code === "P2002") {
+        return res.status(409).json({ error: "Šis lietotājvārds jau tiek izmantots." });
+      }
+      console.error("Username update failed:", error);
+      return res.status(500).json({ error: "Neizdevās nomainīt lietotājvārdu." });
+    }
+  });
+
+  authApp.patch("/api/auth/password", async (req, res) => {
+    try {
+      const user = await getAuthenticatedUser(req, res);
+      if (!user) return;
+
+      const currentPassword = req.body?.currentPassword;
+      const newPassword = req.body?.newPassword;
+      if (typeof currentPassword !== "string" || currentPassword.length > 128
+        || typeof newPassword !== "string" || newPassword.length < 8 || newPassword.length > 128) {
+        return res.status(400).json({
+          error: "Norādiet pašreizējo paroli un jaunu paroli no 8 līdz 128 rakstzīmēm.",
+        });
+      }
+      if (!(await verifyPassword(currentPassword, user.passwordHash))) {
+        return res.status(400).json({ error: "Pašreizējā parole nav pareiza." });
+      }
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash: await hashPassword(newPassword) },
+      });
+      return res.json({ message: "Parole veiksmīgi nomainīta." });
+    } catch (error) {
+      console.error("Password update failed:", error);
+      return res.status(500).json({ error: "Neizdevās nomainīt paroli." });
+    }
+  });
+
+  authApp.patch("/api/auth/theme", async (req, res) => {
+    try {
+      const user = await getAuthenticatedUser(req, res);
+      if (!user) return;
+
+      const theme = req.body?.theme;
+      if (!["CLASSIC", "LIGHT", "DARK"].includes(theme)) {
+        return res.status(400).json({ error: "Izvēlieties derīgu tēmu." });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: { theme },
+      });
+      return res.json({ user: publicUser(updatedUser) });
+    } catch (error) {
+      console.error("Theme update failed:", error);
+      return res.status(500).json({ error: "Neizdevās saglabāt tēmu." });
     }
   });
 

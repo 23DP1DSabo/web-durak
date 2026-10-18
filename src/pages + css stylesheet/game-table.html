@@ -34,6 +34,10 @@
                         <p> </p>
                     </div>
                 </div>
+                <aside id="opponent-clock" class="player-clock opponent-clock" aria-label="Pretinieka atlikušais gājiena laiks">
+                    <span>Bota laiks</span>
+                    <time id="opponent-time">10:00</time>
+                </aside>
                 <div id="opponent-hand" class="card-hand opponent-hand" aria-label="Pretinieka kārtis ar mugurām uz augšu"></div>
             </section>
 
@@ -58,12 +62,22 @@
                 </div>
                 <div id="player-hand" class="card-hand player-hand" aria-label="Tavas kārtis"></div>
             </section>
+            <aside id="player-clock" class="player-clock" aria-label="Tavs atlikušais gājiena laiks">
+                <span>Tavs laiks</span>
+                <time id="player-time">10:00</time>
+            </aside>
         </main>
         <dialog id="game-result-dialog" class="game-result-dialog" aria-labelledby="game-result-title">
             <img id="game-result-icon" class="game-result-icon" alt="" hidden>
-            <h2 id="game-result-title"></h2>
-            <button id="restart-game" type="button">Jauna spēle</button>
+            <section class="game-result-sign">
+                <h2 id="game-result-title"></h2>
+                <div class="game-result-actions">
+                    <button id="restart-game" type="button">Jauna spēle</button>
+                    <a class="game-result-menu-link" href="./index.html">Galvenā izvēlne</a>
+                </div>
+            </section>
         </dialog>
         <script type="module" src="../js/game-table.js"></script>
+        <script type="module" src="../js/theme.js"></script>
     </body>
 </html>

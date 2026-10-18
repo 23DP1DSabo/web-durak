@@ -7,6 +7,8 @@
 
 Autentifikācija izmanto serverī glabātas 7 dienu sesijas un HttpOnly sīkdatni. Reģistrācija automātiski pieslēdz lietotāju; izrakstīšanās anulē pašreizējo sesiju. Viesu spēles ir pieejamas arī bez konta.
 
+Iestatījumu lapā pieslēdzies lietotājs var nomainīt lietotājvārdu, paroli un tēmu. Paroles maiņai jāievada pašreizējā parole un jaunā parole divreiz.
+
 Pārbaudes: `npm test` un `npm run build`. API testi izmanto atmiņas datubāzes aizvietotāju; reālai MySQL pārbaudei nepieciešams konfigurēts `.env` un palaistas migrācijas.
 
 Publicēšanai palaid `npm run build` un `npm run server`, iestati `NODE_ENV=production` un `APP_ORIGIN` uz vietnes HTTPS izcelsmi (bez beigu slīpsvītras). Serveris apkalpo arī `dist` failus. Mēģinājumu ierobežojums darbojas viena servera procesa ietvaros; vairākiem procesiem nepieciešama kopīga ierobežojumu krātuve.

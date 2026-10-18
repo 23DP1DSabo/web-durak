@@ -1,8 +1,8 @@
 import {
   addAttack,
   chooseRandomCard,
-  cardImageFilename,
   createGame,
+  expireTurnTime,
   finishAttack,
   getLegalAttacks,
   getLegalDefenses,
@@ -75,10 +75,18 @@ const playedCards = document.querySelector("#played-cards");
 const resultDialog = document.querySelector("#game-result-dialog");
 const resultIcon = document.querySelector("#game-result-icon");
 const resultTitle = document.querySelector("#game-result-title");
+const playerClock = document.querySelector("#player-clock");
+const playerTime = document.querySelector("#player-time");
+const opponentClock = document.querySelector("#opponent-clock");
+const opponentTime = document.querySelector("#opponent-time");
 let game;
 let selectedCardId = null;
 let botTimer = null;
 let passSelectionActive = false;
+const remainingSeconds = { player: Number(timeLimit), bot: Number(timeLimit) };
+let clockDeadline = 0;
+let clockTimer = null;
+let activeClockPlayer = null;
 
 function imageUrl(card) {
   return cardImages[`../images/PNG-cards-1.3/${card.image}`];
@@ -143,9 +151,8 @@ function render() {
   renderHand(playerHand, game.players.player.hand, "player", playerActiveCards, passSelectionActive ? playerPassCards : []);
   renderHand(opponentHand, game.players.bot.hand, "bot", []);
 
-  const trumpCard = { rank: 14, suit: game.trumpSuit, image: cardImageFilename(14, game.trumpSuit) };
   const trumpImage = document.querySelector("#trump-card");
-  trumpImage.src = imageUrl(trumpCard);
+  trumpImage.src = imageUrl(game.trumpCard);
   trumpImage.alt = `Trumpis: ${suitNames[game.trumpSuit]}`;
   document.querySelector("#draw-pile-count").textContent = `Kavā: ${game.drawPile.length}`;
   document.querySelector("#draw-pile").hidden = game.drawPile.length === 0;
@@ -175,6 +182,7 @@ function render() {
   if (game.result) {
     showResult();
   }
+  syncTurnClock();
   scheduleBotTurn();
 }
 
@@ -205,6 +213,77 @@ function showResult() {
     resultIcon.alt = game.result.winner === "player" ? "Kronis — uzvara" : "Jestera cepure — zaudējums";
   }
   if (!resultDialog.open) resultDialog.showModal();
+}
+
+function formatTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}:${String(remainder).padStart(2, "0")}`;
+}
+
+function updateClockDisplay() {
+  for (const [playerId, clock, display] of [
+    ["player", playerClock, playerTime],
+    ["bot", opponentClock, opponentTime],
+  ]) {
+    display.textContent = formatTime(remainingSeconds[playerId]);
+    display.dateTime = `PT${remainingSeconds[playerId]}S`;
+    clock.classList.toggle("is-low", remainingSeconds[playerId] <= 10);
+  }
+}
+
+function getActiveClockPlayer() {
+  if (game.result) return null;
+  if (game.phase === "attack" || game.phase === "attack-more") return game.attacker;
+  if (game.phase === "defend") return game.defender;
+  return null;
+}
+
+function pauseActiveClock() {
+  if (clockTimer === null) return;
+  window.clearInterval(clockTimer);
+  clockTimer = null;
+  remainingSeconds[activeClockPlayer] = Math.max(
+    0,
+    Math.ceil((clockDeadline - Date.now()) / 1000),
+  );
+  clockDeadline = 0;
+  activeClockPlayer = null;
+  updateClockDisplay();
+}
+
+function syncTurnClock() {
+  const nextActivePlayer = getActiveClockPlayer();
+  if (activeClockPlayer !== nextActivePlayer) pauseActiveClock();
+  if (!nextActivePlayer) {
+    return;
+  }
+  if (clockTimer !== null) return;
+  if (remainingSeconds[nextActivePlayer] <= 0) {
+    expireTurnTime(game, nextActivePlayer);
+    render();
+    return;
+  }
+
+  activeClockPlayer = nextActivePlayer;
+  clockDeadline = Date.now() + remainingSeconds[nextActivePlayer] * 1000;
+  clockTimer = window.setInterval(() => {
+    remainingSeconds[activeClockPlayer] = Math.max(
+      0,
+      Math.ceil((clockDeadline - Date.now()) / 1000),
+    );
+    updateClockDisplay();
+    if (Date.now() >= clockDeadline) {
+      const loser = activeClockPlayer;
+      pauseActiveClock();
+      expireTurnTime(game, loser);
+      if (botTimer !== null) {
+        window.clearTimeout(botTimer);
+        botTimer = null;
+      }
+      render();
+    }
+  }, 250);
 }
 
 function schedule(delay, callback) {
@@ -333,6 +412,12 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
   document.querySelector("#restart-game").addEventListener("click", () => {
     if (botTimer !== null) window.clearTimeout(botTimer);
     botTimer = null;
+    if (clockTimer !== null) window.clearInterval(clockTimer);
+    clockTimer = null;
+    clockDeadline = 0;
+    activeClockPlayer = null;
+    remainingSeconds.player = Number(timeLimit);
+    remainingSeconds.bot = Number(timeLimit);
     selectedCardId = null;
     passSelectionActive = false;
     resultDialog.close();
@@ -346,5 +431,6 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
   }
 
   game = createGame(Math.random, mode);
+  updateClockDisplay();
   render();
 }

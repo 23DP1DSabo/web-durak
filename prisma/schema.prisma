@@ -8,6 +8,7 @@ datasource db {
 }
 
 enum Theme {
+  CLASSIC
   LIGHT
   DARK
 }
@@ -46,7 +47,7 @@ model User {
   passwordHash        String        @map("paroles_jaucejvertiba") @db.VarChar(255)
   name                String        @map("vards") @db.VarChar(50)
   avatar              String?       @map("avatars") @db.VarChar(255)
-  theme               Theme         @default(DARK) @map("tema")
+  theme               Theme         @default(CLASSIC) @map("tema")
   role                UserRole      @default(USER) @map("tiesibas")
   status              UserStatus    @default(ACTIVE) @map("statuss")
   createdAt           DateTime      @default(now()) @map("izveidots") @db.DateTime(3)

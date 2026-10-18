@@ -1,0 +1,6 @@
+ALTER TABLE `Lietotaji`
+    MODIFY COLUMN `tema` ENUM('CLASSIC', 'LIGHT', 'DARK') NOT NULL DEFAULT 'CLASSIC';
+
+UPDATE `Lietotaji`
+SET `tema` = 'CLASSIC'
+WHERE `tema` = 'DARK';
