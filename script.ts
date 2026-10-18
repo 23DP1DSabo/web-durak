@@ -1,4 +1,4 @@
-import { prisma } from "./lib/prisma.ts";
+import { prisma } from "./lib/prisma.js";
 
 async function main() {
   // Read-only schema check; do not seed shared databases with demo accounts.
