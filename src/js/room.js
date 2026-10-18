@@ -1,3 +1,4 @@
+
 const modeNames = {
   classic: "Klasiskais duraks",
   passing: "Padošanu duraks",
@@ -5,109 +6,406 @@ const modeNames = {
   duraklash: "DuraKlash",
 };
 
-const parameters = new URLSearchParams(window.location.search);
-const roomCode = parameters.get("code")?.toUpperCase() ?? "";
-const mode = parameters.get("mode") ?? "classic";
-const role = parameters.get("role") ?? "player";
-const roomStorageKey = `durak-room:${roomCode}`;
-const timeLimitInputs = document.querySelectorAll('input[name="time-limit"]');
+const params = new URLSearchParams(location.search);
+const roomCode = params.get("code")?.toUpperCase() ?? "";
+const mode = params.get("mode") ?? "classic";
+const isHost = params.get("role") === "host";
+
+const playerList = document.querySelector("#player-list");
+const playerCount = document.querySelector("#player-count");
 const timeLimitStatus = document.querySelector("#time-limit-status");
+const timeLimitInputs = document.querySelectorAll('input[name="time-limit"]');
+const allowGuestsInput = document.querySelector("#allow-guests");
+const beginButton = document.querySelector("#begin-match");
+const statusElement = document.querySelector("#room-status");
 
-function readRoomState() {
-  try {
-    return JSON.parse(sessionStorage.getItem(roomStorageKey) ?? "null");
-  } catch {
-    return null;
+let room = null;
+let playerName = "Viesis";
+let busy = false;
+let redirected = false;
+
+let playerId = localStorage.getItem("durak-player-id");
+if (!playerId) {
+  playerId = crypto.randomUUID();
+  localStorage.setItem("durak-player-id", playerId);
+}
+
+function setStatus(message) {
+  statusElement.textContent = message;
+}
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const error = new Error(
+      data.error || "Pieprasījums neizdevās."
+    );
+    error.status = response.status;
+    throw error;
   }
+
+  return data;
 }
 
-let roomState = readRoomState();
-
-function getGuestName() {
+async function loadPlayerName() {
   const storageKey = "durak-guest-name";
-  const existingName = sessionStorage.getItem(storageKey);
-  if (existingName) return existingName;
+  playerName = sessionStorage.getItem(storageKey);
 
-  const digits = crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
-  const guestName = `Guest${String(digits).padStart(5, "0")}`;
-  sessionStorage.setItem(storageKey, guestName);
-  return guestName;
-}
+  if (!playerName) {
+    const digits =
+      crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
 
-function updateTimeLimit(seconds) {
-  const minutes = Number(seconds) / 60;
-  const label = `${minutes} min`;
-  timeLimitStatus.textContent = `Katram spēlētājam: ${label}`;
-  sessionStorage.setItem(`durak-room-time-limit:${roomCode}`, String(seconds));
-  roomState = { ...roomState, code: roomCode, mode, timeLimitSeconds: Number(seconds), status: "waiting" };
-  sessionStorage.setItem(roomStorageKey, JSON.stringify(roomState));
-}
-
-async function showPlayerName() {
-  let name = getGuestName();
-  const playerName = document.querySelector("#player-name");
-  roomState = {
-    ...roomState,
-    code: roomCode,
-    mode,
-    players: [{ name, role }],
-  };
-  sessionStorage.setItem(roomStorageKey, JSON.stringify(roomState));
-  const playerRole = document.querySelector("#player-role");
-  playerName.textContent = name;
-  playerRole.textContent = role === "host" ? "Izveidotājs" : "Tu";
+    playerName = `Guest${String(digits).padStart(5, "0")}`;
+    sessionStorage.setItem(storageKey, playerName);
+  }
 
   try {
-    const response = await fetch("/api/auth/me");
+    const response = await fetch("/api/auth/me", {
+      credentials: "same-origin",
+    });
+
     if (response.ok) {
-      const result = await response.json();
-      name = result.user.name || result.user.email || "Konts";
-      playerName.textContent = name;
+      const data = await response.json();
+      playerName =
+        data.user?.name || data.user?.username || playerName;
     }
   } catch {
-    // Keep the guest name when the auth service is unavailable.
+    // If the user is not logged in, keep the guest name.
   }
 }
 
-if (!/^[A-Z0-9]{8}$/.test(roomCode)) {
-  window.location.replace("./index.html");
-} else {
-  document.querySelector("#room-mode-name").textContent = modeNames[mode] ?? "Spēle";
-  document.querySelector("#room-code").textContent = roomCode;
+function renderRoom() {
+  if (!room) return;
 
-  roomState ??= { code: roomCode, mode, timeLimitSeconds: 600, status: "waiting", players: [] };
-  const savedTimeLimit = sessionStorage.getItem(`durak-room-time-limit:${roomCode}`)
-    ?? String(roomState.timeLimitSeconds ?? 600);
-  const selectedTimeLimit = [...timeLimitInputs].find((input) => input.value === savedTimeLimit);
-  if (selectedTimeLimit) selectedTimeLimit.checked = true;
-  updateTimeLimit(selectedTimeLimit?.value ?? "600");
+  document.querySelector("#room-code").textContent = room.code;
+  document.querySelector("#room-mode-name").textContent =
+    modeNames[room.mode] ?? "Spēle";
 
-  timeLimitInputs.forEach((input) => {
-    input.addEventListener("change", () => updateTimeLimit(input.value));
-  });
+  playerCount.textContent = String(room.players.length);
+  playerList.replaceChildren();
 
-  document.querySelector("#begin-match").addEventListener("click", () => {
-    const playerName = document.querySelector("#player-name").textContent;
-    const currentTimeLimit = document.querySelector('input[name="time-limit"]:checked')?.value ?? "600";
-    roomState = {
-      ...roomState,
-      code: roomCode,
-      mode,
-      timeLimitSeconds: Number(currentTimeLimit),
-      status: "active",
-      players: [{ name: playerName, role }],
-      startedAt: Date.now(),
-    };
-    sessionStorage.setItem(roomStorageKey, JSON.stringify(roomState));
+  for (const player of room.players) {
+    const item = document.createElement("li");
+    item.className = "player-list-item";
 
-    const matchUrl = new URL("./game-table.html", window.location.href);
-    matchUrl.searchParams.set("mode", mode);
-    matchUrl.searchParams.set("code", roomCode);
-    matchUrl.searchParams.set("role", role);
-    matchUrl.searchParams.set("name", playerName);
-    matchUrl.searchParams.set("timeLimit", currentTimeLimit);
-    window.location.assign(matchUrl);
-  });
+    // Visually distinguish the host.
+    if (player.role === "host") {
+      item.classList.add("host-player");
+    }
 
-  showPlayerName();
+    const presence = document.createElement("span");
+    presence.className = "player-presence";
+    presence.setAttribute("aria-hidden", "true");
+
+    const name = document.createElement("span");
+    name.textContent = player.name;
+
+    const roleBadge = document.createElement("span");
+    roleBadge.className = "player-role";
+
+    // The host sees "Tu"; other players see "Izveidotājs".
+    roleBadge.textContent =
+      player.id === playerId
+        ? "Tu"
+        : player.role === "host"
+          ? "Izveidotājs"
+          : "Spēlētājs";
+
+    item.append(presence, name, roleBadge);
+
+    if (
+      isHost &&
+      player.role !== "host" &&
+      room.status === "waiting"
+    ) {
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.className = "remove-player-button";
+      removeButton.textContent = "Izņemt";
+      removeButton.setAttribute(
+        "aria-label",
+        `Izņemt spēlētāju ${player.name}`
+      );
+
+      removeButton.addEventListener("click", () => {
+        removePlayer(player.id, player.name);
+      });
+
+      item.append(removeButton);
+    }
+
+    playerList.append(item);
+  }
+
+  for (const input of timeLimitInputs) {
+    input.checked = Number(input.value) === room.timeLimitSeconds;
+    input.disabled = !isHost || room.status !== "waiting";
+  }
+
+  timeLimitStatus.textContent =
+    `Katram spēlētājam: ${room.timeLimitSeconds / 60} min`;
+
+  allowGuestsInput.checked = room.allowGuests;
+  allowGuestsInput.disabled = !isHost || room.status !== "waiting";
+
+  beginButton.hidden = !isHost;
+  beginButton.disabled =
+    !isHost || room.status !== "waiting" || room.players.length < 2;
+
+  if (room.status === "waiting") {
+    setStatus(
+      room.players.length < 2
+        ? "Gaida citus spēlētājus..."
+        : "Spēlētāji ir gatavi. Izveidotājs var sākt spēli."
+    );
+  }
+
+  if (room.status === "active") {
+    goToMatch();
+  }
 }
+
+async function refreshRoom() {
+  if (redirected || busy) return;
+
+  try {
+    const data = await api(
+      `/api/rooms/${encodeURIComponent(roomCode)}`
+    );
+
+    room = data.room;
+
+    // If the room was destroyed, or this player was removed,
+    // stop polling and return to the homepage.
+    const stillInRoom = room.players.some(
+      (player) => player.id === playerId
+    );
+
+    if (!stillInRoom) {
+      redirected = true;
+      window.clearInterval(refreshTimer);
+      window.location.replace("/");
+      return;
+    }
+
+    renderRoom();
+  } catch (error) {
+    if (error.status === 404) {
+      redirected = true;
+      window.clearInterval(refreshTimer);
+      window.location.replace("/");
+      return;
+    }
+
+    // A temporary server/network problem should not kick
+    // everyone out of a room that may still exist.
+    setStatus(error.message);
+  }
+}
+
+async function updateSettings() {
+  if (!isHost || !room || busy) return;
+
+  busy = true;
+
+  try {
+    const selected = document.querySelector(
+      'input[name="time-limit"]:checked'
+    );
+
+    const data = await api(
+      `/api/rooms/${encodeURIComponent(roomCode)}/settings`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          playerId,
+          timeLimitSeconds: Number(
+            selected?.value ?? room.timeLimitSeconds
+          ),
+          allowGuests: allowGuestsInput.checked,
+        }),
+      }
+    );
+
+    room = data.room;
+    renderRoom();
+    setStatus("Istabas iestatījumi saglabāti.");
+  } catch (error) {
+    setStatus(error.message);
+    await refreshRoom();
+  } finally {
+    busy = false;
+  }
+}
+
+async function removePlayer(targetId, targetName) {
+  if (!isHost || busy || !room || room.status !== "waiting") return;
+
+  if (!confirm(`Vai tiešām izņemt spēlētāju "${targetName}"?`)) {
+    return;
+  }
+
+  busy = true;
+
+  try {
+    const data = await api(
+      `/api/rooms/${encodeURIComponent(roomCode)}/players/${encodeURIComponent(targetId)}`,
+      {
+        method: "DELETE",
+        body: JSON.stringify({ playerId }),
+      }
+    );
+
+    room = data.room;
+    renderRoom();
+    setStatus(`Spēlētājs "${targetName}" ir izņemts no istabas.`);
+  } catch (error) {
+    setStatus(error.message);
+  } finally {
+    busy = false;
+  }
+}
+
+function goToMatch() {
+  if (redirected || !room) return;
+
+  redirected = true;
+
+  const url = new URL("./game-table.html", location.href);
+  url.searchParams.set("mode", room.mode);
+  url.searchParams.set("code", room.code);
+  url.searchParams.set("role", isHost ? "host" : "player");
+  url.searchParams.set("name", playerName);
+  url.searchParams.set("timeLimit", String(room.timeLimitSeconds));
+
+  location.assign(url);
+}
+
+async function startGame() {
+  if (!isHost || !room || busy) return;
+
+  busy = true;
+  beginButton.disabled = true;
+
+  try {
+    const data = await api(
+      `/api/rooms/${encodeURIComponent(roomCode)}/start`,
+      {
+        method: "POST",
+        body: JSON.stringify({ playerId }),
+      }
+    );
+
+    room = data.room;
+    renderRoom();
+  } catch (error) {
+    setStatus(error.message);
+    beginButton.disabled = false;
+  } finally {
+    busy = false;
+  }
+}
+
+async function initializeRoom() {
+  if (
+    !/^[A-Z0-9]{8}$/.test(roomCode) ||
+    !["classic", "passing", "japan", "duraklash"].includes(mode) ||
+    !["host", "player"].includes(params.get("role"))
+  ) {
+    setStatus("Nederīga istabas saite vai istabas kods.");
+    return;
+  }
+
+  await loadPlayerName();
+
+  try {
+    if (isHost) {
+      const data = await api("/api/rooms", {
+        method: "POST",
+        body: JSON.stringify({
+          code: roomCode,
+          mode,
+          playerId,
+          name: playerName,
+          allowGuests: allowGuestsInput.checked,
+        }),
+      });
+
+      room = data.room;
+    } else {
+      const data = await api(
+        `/api/rooms/${encodeURIComponent(roomCode)}/join`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            playerId,
+            name: playerName,
+          }),
+        }
+      );
+
+      room = data.room;
+    }
+
+    renderRoom();
+    refreshTimer = window.setInterval(refreshRoom, 2000);
+  } catch (error) {
+    setStatus(error.message);
+  }
+}
+
+async function leaveRoom() {
+  if (!roomCode || !playerId || redirected) {
+    window.location.replace("/");
+    return;
+  }
+
+  try {
+    await api(
+      `/api/rooms/${encodeURIComponent(roomCode)}/leave`,
+      {
+        method: "POST",
+        body: JSON.stringify({ playerId }),
+      }
+    );
+
+    redirected = true;
+    window.clearInterval(refreshTimer);
+    window.location.replace("/");
+  } catch (error) {
+    console.error("Failed to leave room:", error);
+    setStatus(`Neizdevās pamest istabu: ${error.message}`);
+  }
+}
+
+document.querySelector("#leave-room")?.addEventListener("click", (event) => {
+  event.preventDefault();
+  leaveRoom();
+});
+
+let refreshTimer = null;
+
+timeLimitInputs.forEach((input) => {
+  input.addEventListener("change", updateSettings);
+});
+
+allowGuestsInput.addEventListener("change", updateSettings);
+beginButton.addEventListener("click", startGame);
+
+document
+  .querySelector("#leave-room")
+  ?.addEventListener("click", leaveRoom);
+
+initializeRoom();
+
+

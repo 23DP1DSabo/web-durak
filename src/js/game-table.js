@@ -41,10 +41,10 @@ const rankNames = {
 };
 
 const cardImages = import.meta.glob([
-  "./images/PNG-cards-1.3/{6,7,8,9,10}_of_{clubs,diamonds,hearts,spades}.png",
-  "./images/PNG-cards-1.3/{jack,queen,king}_of_{clubs,diamonds,hearts,spades}2.png",
-  "./images/PNG-cards-1.3/ace_of_{clubs,diamonds,hearts,spades}.png",
-  "./images/PNG-cards-1.3/ace_of_spades2.png",
+  "../images/PNG-cards-1.3/{6,7,8,9,10}_of_{clubs,diamonds,hearts,spades}.png",
+  "../images/PNG-cards-1.3/{jack,queen,king}_of_{clubs,diamonds,hearts,spades}2.png",
+  "../images/PNG-cards-1.3/ace_of_{clubs,diamonds,hearts,spades}.png",
+  "../images/PNG-cards-1.3/ace_of_spades2.png",
 ], {
   eager: true,
   query: "?url",
@@ -81,7 +81,7 @@ let botTimer = null;
 let passSelectionActive = false;
 
 function imageUrl(card) {
-  return cardImages[`./images/PNG-cards-1.3/${card.image}`];
+  return cardImages[`../images/PNG-cards-1.3/${card.image}`];
 }
 
 function cardDescription(card) {

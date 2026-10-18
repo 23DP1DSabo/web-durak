@@ -28,6 +28,12 @@ enum FriendshipStatus {
   DECLINED
 }
 
+enum MatchStatus {
+  WAITING
+  ACTIVE
+  FINISHED
+}
+
 enum MatchResult {
   WIN
   DURAK
@@ -67,25 +73,33 @@ model Friendship {
 }
 
 model Match {
-  id        BigInt        @id @default(autoincrement()) @map("speles_id")
-  mode      String        @map("speles_rezims") @db.VarChar(30)
-  startedAt DateTime      @map("sakums") @db.DateTime(3)
-  endedAt   DateTime      @map("beigas") @db.DateTime(3)
-  players   MatchPlayer[]
+  id               BigInt        @id @default(autoincrement()) @map("speles_id")
+  mode             String        @map("speles_rezims") @db.VarChar(30)
+  roomCode         String        @unique @map("istabas_kods") @db.VarChar(8)
+  status           MatchStatus   @default(WAITING) @map("statuss")
+  timeLimitSeconds Int           @default(600) @map("laika_limits")
+  createdAt        DateTime      @default(now()) @map("izveidots") @db.DateTime(3)
+  startedAt        DateTime?     @map("sakums") @db.DateTime(3)
+  endedAt          DateTime?     @map("beigas") @db.DateTime(3)
+  allowGuests      Boolean       @default(false) @map("atlaut_viesus")
+  players          MatchPlayer[]
 
+  @@index([status, createdAt])
   @@map("Speles")
 }
 
 model MatchPlayer {
-  id        BigInt      @id @default(autoincrement()) @map("speletaja_id")
-  matchId   BigInt      @map("speles_id")
-  userId    BigInt?     @map("lietotaja_id")
-  guestName String?     @map("viesa_vards") @db.VarChar(50)
-  result    MatchResult @map("rezultats")
-  match     Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  user      User?       @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  id        BigInt       @id @default(autoincrement()) @map("speletaja_id")
+  matchId   BigInt       @map("speles_id")
+  userId    BigInt?      @map("lietotaja_id")
+  guestName String?      @map("viesa_vards") @db.VarChar(50)
+  playerKey String?      @map("speletaja_atslega") @db.VarChar(64)
+  result    MatchResult?
+  match     Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user      User?        @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   @@unique([matchId, userId])
+  @@unique([matchId, playerKey])
   @@index([userId])
   @@map("Speles_speletaji")
 }

@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import express from "express";
 
 import { createFriendsRouter } from "./router/friends.js";
+import { createRoomsRouter } from "./router/room.js";
 
 
 export function createAuthApp(prisma) {
@@ -237,6 +238,14 @@ export function createAuthApp(prisma) {
       getSessionToken,
       clearSessionCookie,
     }),
+  );
+
+  authApp.use(
+    "/api/rooms",
+    createRoomsRouter(prisma, {
+      getSessionToken,
+      hashToken,
+    })
   );
 
 
