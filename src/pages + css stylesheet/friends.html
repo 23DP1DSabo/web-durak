@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Draugi | DuraKlash</title>
+    <link rel="stylesheet" href="./main.css">
+</head>
+<body class="auth-page">
+    <a class="auth-back-link" href="./index.html" aria-label="Atpakaļ uz sākumu">
+        Atpakaļ
+    </a>
+
+    <main id="auth-panel" class="content-panel">
+        <header class="auth-header">
+            <h1>DuraKlash</h1>
+        </header>
+
+        <h2>Draugi</h2>
+
+        <section class="placeholder-section" aria-labelledby="search-heading">
+            <h3 id="search-heading">Pievienot draugu</h3>
+            <form id="friend-search-form">
+                <label for="friend-username">Spēlētāja lietotājvārds</label>
+                <div>
+                    <input
+                        id="friend-username"
+                        name="username"
+                        type="text"
+                        maxlength="50"
+                        autocomplete="off"
+                        placeholder="Ievadi lietotājvārdu"
+                    >
+                    <button class="btn btn-primary" type="submit">
+                        Meklēt
+                    </button>
+                </div>
+            </form>
+            <p id="friend-search-message" role="status" aria-live="polite"></p>
+            <ul id="friend-search-results"></ul>
+        </section>
+
+        <section class="placeholder-section" aria-labelledby="friends-heading">
+            <h3 id="friends-heading">Draugu saraksts</h3>
+            <ul id="friends-list"></ul>
+            <p id="friends-empty">Te vēl nav draugu.</p>
+        </section>
+
+        <section class="placeholder-section" aria-labelledby="requests-heading">
+            <h3 id="requests-heading">Saņemtie uzaicinājumi</h3>
+            <ul id="friend-requests-list"></ul>
+            <p id="requests-empty">Nav jaunu uzaicinājumu.</p>
+        </section>
+
+        <section class="placeholder-section" aria-labelledby="sent-heading">
+            <h3 id="sent-heading">Nosūtītie uzaicinājumi</h3>
+            <ul id="sent-requests-list"></ul>
+            <p id="sent-empty">Nav nosūtītu uzaicinājumu.</p>
+        </section>
+
+        <p id="friends-page-message" role="status" aria-live="polite"></p>
+    </main>
+    <script type="module" src="../js/friends.js"></script>
+</body>
+</html>

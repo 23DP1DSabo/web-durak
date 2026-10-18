@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 const app = createAuthApp(prisma);
 
 app.get("/", (_req: Request, res: Response) =>
-  res.redirect("/pages%20+%20css%20stylesheet/index.html"),
+  res.redirect("src/pages%20+%20css%20stylesheet/index.html"),
 );
 
 const distPath = resolve(process.cwd(), "dist");

@@ -8,6 +8,8 @@ import {
 import { promisify } from "node:util";
 import express from "express";
 
+import { createFriendsRouter } from "./router/friends.js";
+
 
 export function createAuthApp(prisma) {
   const authApp = express();
@@ -228,6 +230,15 @@ export function createAuthApp(prisma) {
       return res.status(500).json({ error: "Neizdevās izrakstīties." });
     }
   });
+
+  authApp.use(
+    "/api/friends",
+    createFriendsRouter(prisma, {
+      getSessionToken,
+      clearSessionCookie,
+    }),
+  );
+
 
   authApp.use((error, req, res, next) => {
     if (error.type === "entity.too.large") return res.status(413).json({ error: "Pieprasījums ir pārāk liels." });
