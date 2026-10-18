@@ -1,5 +1,7 @@
 import { defineConfig } from 'vite';
 
+const pagesRoot = '/src/pages%20+%20css%20stylesheet/';
+
 export default defineConfig({
   plugins: [
     {
@@ -8,7 +10,7 @@ export default defineConfig({
         server.middlewares.use((req, res, next) => {
           if (req.url === '/') {
             res.statusCode = 302;
-            res.setHeader('Location', '/pages%20+%20css%20stylesheet/index.html');
+            res.setHeader('Location', `${pagesRoot}index.html`);
             res.end();
             return;
           }
@@ -26,13 +28,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: 'pages + css stylesheet/index.html',
-        room: 'pages + css stylesheet/room.html',
-        gameTable: 'pages + css stylesheet/game-table.html',
-        auth: 'pages + css stylesheet/auth.html',
-        friends: 'pages + css stylesheet/friends.html',
-        rules: 'pages + css stylesheet/rules.html',
-        settings: 'pages + css stylesheet/settings.html',
+        main: 'src/pages + css stylesheet/index.html',
+        room: 'src/pages + css stylesheet/room.html',
+        gameTable: 'src/pages + css stylesheet/game-table.html',
+        auth: 'src/pages + css stylesheet/auth.html',
+        friends: 'src/pages + css stylesheet/friends.html',
+        rules: 'src/pages + css stylesheet/rules.html',
+        settings: 'src/pages + css stylesheet/settings.html',
       },
     },
   },

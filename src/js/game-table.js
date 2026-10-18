@@ -13,8 +13,8 @@ import {
   resolveExchange,
   takeAttack,
 } from "./game-logic.js";
-import winnerCrown from "./images/crown_winner.png";
-import loserJesterHat from "./images/jester_hat_loser.png";
+import winnerCrown from "../images/crown_winner.png";
+import loserJesterHat from "../images/jester_hat_loser.png";
 
 const modeNames = {
   classic: "Klasiskais duraks",
