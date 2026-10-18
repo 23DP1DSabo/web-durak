@@ -38,16 +38,20 @@ export function shuffleDeck(deck, random = Math.random) {
 export function createGame(random = Math.random, mode = "classic") {
   const deck = shuffleDeck(createDeck(), random);
   const trumpSuit = mode === "japan" ? "diamonds" : SUITS[Math.floor(random() * SUITS.length)];
+  const trumpCardIndex = deck.findIndex((card) => card.rank === 14 && card.suit === trumpSuit);
+  const [trumpCard] = deck.splice(trumpCardIndex, 1);
   const players = {
     player: { hand: deck.splice(0, HAND_SIZE) },
     bot: { hand: deck.splice(0, HAND_SIZE) },
   };
+  deck.unshift(trumpCard);
   const attacker = random() < 0.5 ? "player" : "bot";
 
   return {
     players,
     drawPile: deck,
     discardPile: [],
+    trumpCard,
     trumpSuit,
     mode,
     attacker,
@@ -245,6 +249,19 @@ export function resolveExchange(game) {
     return true;
   }
   return false;
+}
+
+export function expireTurnTime(game, loser) {
+  if (game.result) return false;
+  const winner = loser === "player" ? "bot" : "player";
+  game.result = {
+    winner,
+    message: loser === "player"
+      ? "Tavam laikam beidzoties, Bots uzvarēja!"
+      : "Botam beidzās laiks! Tu uzvarēji!",
+  };
+  game.phase = "finished";
+  return true;
 }
 
 export function chooseRandomCard(cards, random = Math.random) {
