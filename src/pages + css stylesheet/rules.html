@@ -8,20 +8,35 @@
     </head>
     <body class="auth-page">
         <a class="auth-back-link" href="./index.html" aria-label="Atpakaļ uz sākumu">Atpakaļ</a>
-        <main id="auth-panel" class="content-panel">
+        <main id="auth-panel" class="content-panel rules-panel">
             <header class="auth-header">
                 <h1>DuraKlash</h1>
             </header>
             <h2>Noteikumi</h2>
-            <div class="placeholder-sections">
-                <section class="placeholder-section">
-                    <h3>Spēles noteikumi</h3>
-                    <p>1.</p>
+            <div class="rules-sections">
+                <section class="rules-section" aria-labelledby="classic-rules-heading">
+                    <h3 id="classic-rules-heading">Klasiskais duraks</h3>
+                    <p>Mērķis ir pirmajam atbrīvoties no visām kārtīm. Kad kava ir tukša, spēlētājs, kuram palikušas kārtis, zaudē.</p>
+                    <ol>
+                        <li>Spēlē izmanto 36 kārtis: no sešinieka līdz dūzim. Katrs spēlētājs saņem sešas kārtis. Viena kava atklāj trumpja mastu; pati trumpja kārts atrodas kavas apakšā un tiek paņemta pēdējā.</li>
+                        <li>Uzbrucējs noliek vienu kārti. Aizsargs to sit ar augstāku tās pašas masta kārti vai trumpi. Trumpi var pārspēt tikai ar augstāku trumpi.</li>
+                        <li>Ja kārti nosist nevar vai negrib, aizsargs paņem visas uz galda esošās kārtis. Uzbrucējs sāk nākamo uzbrukumu.</li>
+                        <li>Pēc veiksmīgas aizsardzības uzbrucējs drīkst pievienot kārtis, kuru vērtība jau redzama uz galda. Kopējais uzbrukuma kāršu skaits nedrīkst pārsniegt aizsarga kāršu skaitu uzbrukuma sākumā. Uzbrucējs var arī pabeigt uzbrukumu.</li>
+                        <li>Pēc nosista uzbrukuma kārtis tiek noliktas malā, un aizsargs kļūst par nākamo uzbrucēju. Pēc gājiena abi spēlētāji papildina roku līdz sešām kārtīm, vispirms to dara uzbrucējs.</li>
+                        <li>Ja kava ir tukša un abi reizē paliek bez kārtīm, spēle beidzas neizšķirti. Gājiena laika beigšanās nozīmē attiecīgā spēlētāja zaudējumu.</li>
+                    </ol>
                 </section>
-                <section class="placeholder-section">
-                    <h3>Variantu noteikumi</h3>
+                <section class="rules-section" aria-labelledby="variant-rules-heading">
+                    <h3 id="variant-rules-heading">Spēles varianti</h3>
+                    <h4>Padošanu duraks</h4>
+                    <p>Pirms aizsardzības sākšanas aizsargs var padot uzbrukumu tālāk, pievienojot tādas pašas vērtības, bet cita masta kārti. Uzbrucēja un aizsarga lomas samainās. Padot drīkst tikai tad, ja jaunajam aizsargam pietiek kāršu, lai uzņemtos visu uzbrukumu.</p>
+                    <h4>Japāņu duraks</h4>
+                    <p>Kāravi vienmēr ir trumpis. Pīķus ar trumpi sist nedrīkst; pārējo mastu kārtis var sist ar kāraviem. Tās pašas masta kārtis joprojām sit ar augstāku tās pašas masta kārti.</p>
+                    <h4>DuraKlash</h4>
+                    <p>Šajā versijā DuraKlash režīms pašlaik izmanto klasiskā duraka noteikumus; atsevišķi režīma noteikumi vēl nav ieviesti.</p>
                 </section>
             </div>
         </main>
+        <script type="module" src="../js/theme.js"></script>
     </body>
 </html>
