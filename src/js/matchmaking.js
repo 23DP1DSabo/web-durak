@@ -32,6 +32,25 @@ function openRoomPage(code, role) {
   window.location.assign(roomUrl);
 }
 
+async function checkRoomAccess(code) {
+  const response = await fetch(
+    `/api/rooms/${encodeURIComponent(code)}/access`,
+    {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    }
+  );
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "Neizdevās pārbaudīt istabu.");
+  }
+
+  return data;
+}
+
 function createRoomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const randomValues = new Uint8Array(8);
@@ -75,16 +94,33 @@ roomCodeInput.addEventListener("input", () => {
   joinRoomMessage.hidden = true;
 });
 
-joinRoomForm.addEventListener("submit", (event) => {
+joinRoomForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const code = roomCodeInput.value.trim().toUpperCase();
 
   if (!/^[A-Z0-9]{8}$/.test(code)) {
-    joinRoomMessage.textContent = "Ievadi derīgu 8 simbolu kodu, izmantojot burtus un ciparus.";
+    joinRoomMessage.textContent =
+      "Ievadi derīgu 8 simbolu kodu, izmantojot burtus un ciparus.";
     joinRoomMessage.hidden = false;
     roomCodeInput.focus();
     return;
   }
 
-  openRoomPage(code, "player");
+  joinRoomForm.querySelector('[type="submit"]').disabled = true;
+  joinRoomMessage.textContent = "Pārbauda istabu...";
+  joinRoomMessage.hidden = false;
+
+  try {
+    await checkRoomAccess(code);
+
+    // Navigate only after the server confirms access.
+    openRoomPage(code, "player");
+  } catch (error) {
+    joinRoomMessage.textContent = error.message;
+    joinRoomMessage.hidden = false;
+  } finally {
+    const submitButton = joinRoomForm.querySelector('[type="submit"]');
+    if (submitButton) submitButton.disabled = false;
+  }
 });

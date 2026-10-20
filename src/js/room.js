@@ -34,6 +34,7 @@ function setStatus(message) {
   statusElement.textContent = message;
 }
 
+
 async function api(url, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -50,12 +51,16 @@ async function api(url, options = {}) {
     const error = new Error(
       data.error || "Pieprasījums neizdevās."
     );
+
     error.status = response.status;
+    error.code = data.code;
+
     throw error;
   }
 
   return data;
 }
+
 
 async function loadPlayerName() {
   const storageKey = "durak-guest-name";
@@ -383,8 +388,27 @@ async function initializeRoom() {
     renderRoom();
     refreshTimer = window.setInterval(refreshRoom, 2000);
   } catch (error) {
+    console.error("Failed to initialize room:", error);
+
+    if (
+      error.code === "GUESTS_NOT_ALLOWED" ||
+      (error.status === 403 &&
+        error.message.includes("viesi bez konta nav atļauti"))
+    ) {
+      redirected = true;
+
+      alert(
+        "Šajā istabā viesi bez konta nav atļauti. Lūdzu, piesakieties vai izvēlieties citu istabu."
+      );
+
+      window.location.replace("/");
+      return;
+    }
+
     setStatus(error.message);
   }
+
+
 }
 
 async function leaveRoom() {

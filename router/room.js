@@ -153,6 +153,34 @@ export function createRoomsRouter(prisma, { getSessionToken, hashToken } = {}) {
     }
   });
 
+
+  router.get("/:code/access", async (req, res, next) => {
+    try {
+      const code = req.params.code.toUpperCase();
+      const room = await loadRoom(code);
+
+      if (!room) {
+        return res.status(404).json({
+          error: "Istaba nav atrasta.",
+        });
+      }
+
+      const user = await getCurrentUser(req);
+
+      if (!user && !room.allowGuests) {
+        return res.status(403).json({
+          error: "Šajā istabā viesi bez konta nav atļauti.",
+          code: "GUESTS_NOT_ALLOWED",
+        });
+      }
+
+      return res.json({ allowed: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+
   // Join a room.
   router.post("/:code/join", async (req, res, next) => {
     try {
@@ -161,48 +189,63 @@ export function createRoomsRouter(prisma, { getSessionToken, hashToken } = {}) {
       const user = await getCurrentUser(req);
       const room = await loadRoom(code);
 
+      // Check that the room exists before accessing its properties.
       if (!room) {
-        return res.status(404).json({ error: "Istaba nav atrasta." });
+        return res.status(404).json({
+          error: "Istaba nav atrasta.",
+        });
       }
 
-      if (room.status !== "WAITING") {
-        return res.status(409).json({ error: "Spēle jau ir sākusies." });
-      }
-
-      if (!playerId || !name) {
-        return res.status(400).json({ error: "Trūkst spēlētāja datu." });
-      }
-
+      // Reject guests if the host has disabled guest access.
       if (!user && !room.allowGuests) {
         return res.status(403).json({
           error: "Šajā istabā viesi bez konta nav atļauti.",
+          code: "GUESTS_NOT_ALLOWED",
+        });
+      }
+
+      if (room.status !== "WAITING") {
+        return res.status(409).json({
+          error: "Spēle jau ir sākusies.",
+        });
+      }
+
+      if (!playerId || !name) {
+        return res.status(400).json({
+          error: "Trūkst spēlētāja datu.",
         });
       }
 
       const existing = await findRoomPlayer(room, playerId, user);
+
       if (existing) {
         return res.json({ room: publicRoom(room) });
       }
 
       if (room.players.length >= 6) {
-        return res.status(409).json({ error: "Istaba ir pilna." });
+        return res.status(409).json({
+          error: "Istaba ir pilna.",
+        });
       }
 
       await prisma.matchPlayer.create({
         data: {
           matchId: room.id,
           playerKey: playerId,
-          guestName: user ? null : (name?.trim() || "Viesis"),
+          guestName: user ? null : (name.trim() || "Viesis"),
           ...(user ? { userId: user.id } : {}),
         },
       });
 
       const updated = await loadRoom(code);
-      res.status(201).json({ room: publicRoom(updated) });
+      return res.status(201).json({
+        room: publicRoom(updated),
+      });
     } catch (error) {
       next(error);
     }
   });
+
 
   // Update room settings; only the host may do this while waiting.
   router.patch("/:code/settings", async (req, res, next) => {
