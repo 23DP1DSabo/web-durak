@@ -192,7 +192,7 @@ export function createRoomsRouter(prisma, { getSessionToken, hashToken } = {}) {
         data: {
           matchId: room.id,
           playerKey: playerId,
-          guestName: name?.trim() || "Viesis",
+          guestName: user ? null : (name?.trim() || "Viesis"),
           ...(user ? { userId: user.id } : {}),
         },
       });

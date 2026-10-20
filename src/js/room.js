@@ -65,7 +65,7 @@ async function loadPlayerName() {
     const digits =
       crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
 
-    playerName = `Guest${String(digits).padStart(5, "0")}`;
+    playerName = `Viesis${String(digits).padStart(5, "0")}`;
     sessionStorage.setItem(storageKey, playerName);
   }
 
@@ -401,10 +401,6 @@ timeLimitInputs.forEach((input) => {
 
 allowGuestsInput.addEventListener("change", updateSettings);
 beginButton.addEventListener("click", startGame);
-
-document
-  .querySelector("#leave-room")
-  ?.addEventListener("click", leaveRoom);
 
 initializeRoom();
 
