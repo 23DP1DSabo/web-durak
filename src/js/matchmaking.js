@@ -51,6 +51,88 @@ async function checkRoomAccess(code) {
   return data;
 }
 
+
+function getPlayerId() {
+  let playerId = localStorage.getItem("durak-player-id");
+
+  if (!playerId) {
+    playerId = crypto.randomUUID();
+    localStorage.setItem("durak-player-id", playerId);
+  }
+
+  return playerId;
+}
+
+async function getQuickplayPlayerName() {
+  let name = sessionStorage.getItem("durak-guest-name");
+
+  if (!name) {
+    const digits =
+      crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
+
+    name = `Viesis${String(digits).padStart(5, "0")}`;
+    sessionStorage.setItem("durak-guest-name", name);
+  }
+
+  try {
+    const response = await fetch("/api/auth/me", {
+      credentials: "same-origin",
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      name = data.user?.name || data.user?.username || name;
+    }
+  } catch {
+    // Keep the guest name if account lookup fails.
+  }
+
+  return name;
+}
+
+async function quickplay(mode, button) {
+  const originalText = button.textContent;
+
+  button.disabled = true;
+  button.textContent = "Meklē istabu...";
+
+  try {
+    const name = await getQuickplayPlayerName();
+
+    const response = await fetch("/api/rooms/quickplay", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        mode,
+        playerId: getPlayerId(),
+        name,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        data.error || "Neizdevās atrast spēles istabu."
+      );
+    }
+
+    // Navigate using the room code returned by the server.
+    selectedMode = data.room.mode;
+    openRoomPage(data.room.code, "player");
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
+
 function createRoomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const randomValues = new Uint8Array(8);
@@ -124,3 +206,19 @@ joinRoomForm.addEventListener("submit", async (event) => {
     if (submitButton) submitButton.disabled = false;
   }
 });
+
+
+const quickplayButtons = {
+  "quick-game-classic": "classic",
+  "quick-game-passing": "passing",
+  "quick-game-japan": "japan",
+  "quick-game-duraklash": "duraklash",
+};
+
+for (const [buttonId, mode] of Object.entries(quickplayButtons)) {
+  const button = document.getElementById(buttonId);
+
+  button?.addEventListener("click", () => {
+    quickplay(mode, button);
+  });
+}

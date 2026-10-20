@@ -175,9 +175,17 @@ function renderRoom() {
     );
   }
 
+  if (room.status === "finished") {
+    redirected = true;
+    window.clearInterval(refreshTimer);
+    setStatus("Istaba ir aizvērta. Atgriežamies sākumlapā...");
+    window.location.replace("/");
+    return;
+  }
+
   if (room.status === "active") {
     goToMatch();
-  } 
+  }
 }
 
 async function refreshRoom() {
@@ -188,7 +196,16 @@ async function refreshRoom() {
       `/api/rooms/${encodeURIComponent(roomCode)}`
     );
 
-    room = data.room;
+        room = data.room;
+
+    // If the host closed the room or the match was finished,
+    // send everyone still viewing the waiting room home.
+    if (room.status === "finished") {
+      redirected = true;
+      window.clearInterval(refreshTimer);
+      window.location.replace("/");
+      return;
+    }
 
     // If the room was destroyed, or this player was removed,
     // stop polling and return to the homepage.

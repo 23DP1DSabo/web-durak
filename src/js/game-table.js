@@ -87,6 +87,8 @@ const remainingSeconds = { player: Number(timeLimit), bot: Number(timeLimit) };
 let clockDeadline = 0;
 let clockTimer = null;
 let activeClockPlayer = null;
+let finishRequestSent = false;
+
 
 function imageUrl(card) {
   return cardImages[`../images/PNG-cards-1.3/${card.image}`];
@@ -205,7 +207,52 @@ function createTableCard(card, type) {
   return image;
 }
 
+async function notifyRoomFinished() {
+  if (finishRequestSent) return;
+
+  // Use the same room code and player ID variables that
+  // your existing room API calls use.
+  const code = new URLSearchParams(window.location.search)
+    .get("code");
+
+  const playerId = localStorage.getItem("durak-player-id");
+
+  if (!code || !playerId) {
+    console.warn("Cannot finish room: missing room code or player ID.");
+    return;
+  }
+
+  finishRequestSent = true;
+
+  try {
+    const response = await fetch(
+      `/api/rooms/${encodeURIComponent(code)}/finish`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ playerId }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || "Failed to finish room");
+    }
+  } catch (error) {
+    // Permit a retry if the request failed.
+    finishRequestSent = false;
+    console.error("Could not mark room as finished:", error);
+  }
+}
+
 function showResult() {
+  if (!game.result) return;
+
+  void notifyRoomFinished();
+
   resultTitle.textContent = game.result.message;
   resultIcon.hidden = !game.result.winner;
   if (game.result.winner) {
@@ -389,10 +436,6 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
   document.querySelector(".player-avatar").textContent = playerName.trim().charAt(0).toUpperCase() || "D";
   document.querySelector(".opponent-avatar").textContent = "B";
 
-  // const returnUrl = new URL("./room.html", window.location.href);
-  // returnUrl.searchParams.set("mode", mode);
-  // returnUrl.searchParams.set("code", roomCode);
-  // returnUrl.searchParams.set("role", role);
   const returnToRoomLink = document.querySelector("#return-to-room");
   returnToRoomLink.href = "./index.html";
 
