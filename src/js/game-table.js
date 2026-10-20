@@ -389,11 +389,12 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
   document.querySelector(".player-avatar").textContent = playerName.trim().charAt(0).toUpperCase() || "D";
   document.querySelector(".opponent-avatar").textContent = "B";
 
-  const returnUrl = new URL("./room.html", window.location.href);
-  returnUrl.searchParams.set("mode", mode);
-  returnUrl.searchParams.set("code", roomCode);
-  returnUrl.searchParams.set("role", role);
-  document.querySelector("#return-to-room").href = returnUrl;
+  // const returnUrl = new URL("./room.html", window.location.href);
+  // returnUrl.searchParams.set("mode", mode);
+  // returnUrl.searchParams.set("code", roomCode);
+  // returnUrl.searchParams.set("role", role);
+  const returnToRoomLink = document.querySelector("#return-to-room");
+  returnToRoomLink.href = "./index.html";
 
   playButton.addEventListener("click", () => {
     if (game.phase === "attack" || game.phase === "attack-more") completePlayerAttack();
@@ -427,7 +428,6 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
 
   if (roomState) {
     roomState.status = "active";
-    sessionStorage.setItem(`durak-room:${roomCode}`, JSON.stringify(roomState));
   }
 
   game = createGame(Math.random, mode);

@@ -204,22 +204,22 @@ export function createRoomsRouter(prisma, { getSessionToken, hashToken } = {}) {
         });
       }
 
-      if (room.status !== "WAITING") {
-        return res.status(409).json({
-          error: "Spēle jau ir sākusies.",
-        });
-      }
-
       if (!playerId || !name) {
-        return res.status(400).json({
-          error: "Trūkst spēlētāja datu.",
-        });
+        return res.status(400).json({ error: "Trūkst spēlētāja datu." });
       }
 
+      // Allow existing members to return to an active room.
       const existing = await findRoomPlayer(room, playerId, user);
 
       if (existing) {
         return res.json({ room: publicRoom(room) });
+      }
+
+      // New players cannot join after the game starts.
+      if (room.status !== "WAITING") {
+        return res.status(409).json({
+          error: "Spēle jau ir sākusies.",
+        });
       }
 
       if (room.players.length >= 6) {

@@ -177,7 +177,7 @@ function renderRoom() {
 
   if (room.status === "active") {
     goToMatch();
-  }
+  } 
 }
 
 async function refreshRoom() {
