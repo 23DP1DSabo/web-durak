@@ -160,11 +160,11 @@ function renderRoom() {
 
   beginButton.hidden = !isHost;
   beginButton.disabled =
-    !isHost || room.status !== "waiting" || room.players.length < 2;
+    !isHost || room.status !== "waiting" || room.players.length < 1;
 
   if (room.status === "waiting") {
     setStatus(
-      room.players.length < 2
+      room.players.length < 1
         ? "Gaida citus spēlētājus..."
         : "Spēlētāji ir gatavi. Izveidotājs var sākt spēli."
     );
@@ -292,7 +292,23 @@ function goToMatch() {
 }
 
 async function startGame() {
-  if (!isHost || !room || busy) return;
+  console.log("[Room] Begin Match clicked", {
+    isHost,
+    roomStatus: room?.status,
+    players: room?.players?.length,
+    busy,
+    roomCode,
+  });
+
+  if (!isHost || !room || busy) {
+    console.warn("[Room] Start blocked by preconditions.");
+    return;
+  }
+
+  if (room.status !== "waiting" || room.players.length < 1) {
+    setStatus("Istabā jābūt vismaz vienam spēlētājam.");
+    return;
+  }
 
   busy = true;
   beginButton.disabled = true;
@@ -306,9 +322,16 @@ async function startGame() {
       }
     );
 
+    console.log("[Room] Start response:", data);
+
     room = data.room;
     renderRoom();
+
+    if (room.status !== "active") {
+      setStatus("Serveris vēl nav atzīmējis spēli kā sāktu.");
+    }
   } catch (error) {
+    console.error("[Room] Failed to start match:", error);
     setStatus(error.message);
     beginButton.disabled = false;
   } finally {
@@ -392,6 +415,7 @@ document.querySelector("#leave-room")?.addEventListener("click", (event) => {
   event.preventDefault();
   leaveRoom();
 });
+
 
 let refreshTimer = null;
 

@@ -303,8 +303,8 @@ export function createRoomsRouter(prisma, { getSessionToken, hashToken } = {}) {
         return res.status(409).json({ error: "Spēle jau ir sākusies." });
       }
 
-      if (room.players.length < 2) {
-        return res.status(400).json({ error: "Lai sāktu spēli, vajadzīgi vismaz divi spēlētāji." });
+      if (room.players.length < 1) {
+        return res.status(400).json({ error: "Istabā jābūt vismaz vienam spēlētājam." });
       }
 
       const updated = await prisma.match.update({

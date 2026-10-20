@@ -40,7 +40,9 @@
                     <p class="room-description">Istabas kods</p>
                     <p id="room-code" class="room-code" aria-live="polite"></p>
                     
-                    <p class="room-description">Spēles istaba ir gatava.</p>
+                    <p id="room-status" role="status" aria-live="polite">
+                        Ielādē istabu...
+                    </p>
                     <button id="begin-match" class="begin-match-button" type="button">Sākt spēli</button>
                 </section>
                 <section class="room-side-panel player-panel" aria-labelledby="player-list-heading">
@@ -48,7 +50,7 @@
                     <ul id="player-list" class="player-list" aria-live="polite">
                         <li class="player-list-item">
                             <span class="player-presence" aria-hidden="true"></span>
-                            <span id="player-name">Viesis</span>
+                            <span id="player-name"></span>
                             <span id="player-role" class="player-role">Tu</span>
                         </li>
                     </ul>
