@@ -18,6 +18,17 @@ export function createAuthApp(prisma) {
   const authApp = express();
   const sessionDuration = 7 * 24 * 60 * 60 * 1000;
   const scryptAsync = promisify(scrypt);
+  const banDurations = {
+    "10s": 10 * 1000,
+    "10m": 10 * 60 * 1000,
+    "12h": 12 * 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+    "178d": 178 * 24 * 60 * 60 * 1000,
+    "356d": 356 * 24 * 60 * 60 * 1000,
+    "712d": 712 * 24 * 60 * 60 * 1000,
+  };
 
   authApp.disable("x-powered-by");
   authApp.use("/api", (req, res, next) => {
@@ -93,6 +104,13 @@ export function createAuthApp(prisma) {
       where: { tokenHash: hashToken(token) },
       include: { user: true },
     });
+    if (session?.user.status === "BANNED" && session.user.banExpiresAt
+      && session.user.banExpiresAt <= new Date()) {
+      session.user = await prisma.user.update({
+        where: { id: session.user.id },
+        data: { status: "ACTIVE", banExpiresAt: null },
+      });
+    }
     if (!session || session.expiresAt <= new Date() || session.user.status !== "ACTIVE") {
       if (session) {
         await prisma.session.deleteMany({ where: { tokenHash: session.tokenHash } });
@@ -150,6 +168,12 @@ export function createAuthApp(prisma) {
       && password.length <= 128;
   }
 
+  function parseUserId(value) {
+    if (typeof value !== "string" || !/^[1-9]\d{0,18}$/.test(value)) return null;
+    const id = BigInt(value);
+    return id <= 9223372036854775807n ? id : null;
+  }
+
   authApp.post("/api/auth/register", async (req, res) => {
     const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
     const password = req.body?.password;
@@ -164,7 +188,9 @@ export function createAuthApp(prisma) {
     try {
       const passwordHash = await hashPassword(password);
       const { user, token } = await prisma.$transaction(async (db) => {
-        const user = await db.user.create({ data: { email, name, username, passwordHash } });
+        const user = await db.user.create({
+          data: { email, name, username, passwordHash, lastLoginAt: new Date() },
+        });
         const token = await createSession(db, user.id, req);
         return { user, token };
       });
@@ -193,10 +219,22 @@ export function createAuthApp(prisma) {
         return res.status(401).json({ error: "Nepareizs e-pasts vai parole." });
       }
       if (user.status === "BANNED") {
-        return res.status(403).json({ error: "Šis konts ir bloķēts." });
+        if (!user.banExpiresAt || user.banExpiresAt > new Date()) {
+          return res.status(403).json({ error: "Šis konts ir bloķēts." });
+        }
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { status: "ACTIVE", banExpiresAt: null },
+        });
       }
 
-      const token = await prisma.$transaction((db) => createSession(db, user.id, req));
+      const token = await prisma.$transaction(async (db) => {
+        await db.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+        return createSession(db, user.id, req);
+      });
       setSessionCookie(res, token);
       return res.json({ user: publicUser(user) });
     } catch (error) {
@@ -219,7 +257,15 @@ export function createAuthApp(prisma) {
         include: { user: true },
       });
 
-      if (!session || session.expiresAt <= new Date() || session.user.status === "BANNED") {
+      if (session?.user.status === "BANNED" && session.user.banExpiresAt
+        && session.user.banExpiresAt <= new Date()) {
+        session.user = await prisma.user.update({
+          where: { id: session.user.id },
+          data: { status: "ACTIVE", banExpiresAt: null },
+        });
+      }
+
+      if (!session || session.expiresAt <= new Date() || session.user.status !== "ACTIVE") {
         if (session) {
           await prisma.session.deleteMany({
             where: { tokenHash: session.tokenHash },
@@ -329,6 +375,125 @@ export function createAuthApp(prisma) {
     } catch (error) {
       console.error("Theme update failed:", error);
       return res.status(500).json({ error: "Neizdevās saglabāt tēmu." });
+    }
+  });
+
+  authApp.get("/api/admin/users", async (req, res) => {
+    try {
+      const user = await getAuthenticatedUser(req, res);
+      if (!user) return;
+      if (user.role !== "ADMIN") {
+        return res.status(403).json({ error: "Šī darbība atļauta tikai administratoriem." });
+      }
+
+      res.setHeader("Cache-Control", "no-store");
+      const now = new Date();
+      await prisma.user.updateMany({
+        where: { status: "BANNED", banExpiresAt: { lte: now } },
+        data: { status: "ACTIVE", banExpiresAt: null },
+      });
+      const users = await prisma.user.findMany({
+        orderBy: { username: "asc" },
+        select: {
+          id: true,
+          username: true,
+          avatar: true,
+          role: true,
+          status: true,
+          lastLoginAt: true,
+          banExpiresAt: true,
+          sessions: {
+            where: { expiresAt: { gt: now } },
+            select: { tokenHash: true },
+            take: 1,
+          },
+        },
+      });
+
+      return res.json({
+        users: users.map(({ sessions, ...listedUser }) => ({
+          ...listedUser,
+          id: String(listedUser.id),
+          isOnline: listedUser.status === "ACTIVE" && sessions.length > 0,
+        })),
+      });
+    } catch (error) {
+      console.error("Admin user list failed:", error);
+      return res.status(500).json({ error: "Neizdevās ielādēt lietotāju sarakstu." });
+    }
+  });
+
+  authApp.post("/api/admin/users/:userId/ban", async (req, res) => {
+    try {
+      const admin = await getAuthenticatedUser(req, res);
+      if (!admin) return;
+      if (admin.role !== "ADMIN") {
+        return res.status(403).json({ error: "Šī darbība atļauta tikai administratoriem." });
+      }
+
+      const targetId = parseUserId(req.params.userId);
+      const duration = req.body?.duration;
+      if (targetId === null || (duration !== "permanent" && !Object.hasOwn(banDurations, duration))) {
+        return res.status(400).json({ error: "Norādiet derīgu lietotāju un bloķēšanas ilgumu." });
+      }
+      const target = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!target) return res.status(404).json({ error: "Lietotājs nav atrasts." });
+      if (target.id === admin.id || target.role === "ADMIN") {
+        return res.status(400).json({ error: "Administratora kontu bloķēt nevar." });
+      }
+
+      const banExpiresAt = duration === "permanent"
+        ? null
+        : new Date(Date.now() + banDurations[duration]);
+      const updatedUser = await prisma.$transaction(async (db) => {
+        const user = await db.user.update({
+          where: { id: targetId },
+          data: { status: "BANNED", banExpiresAt },
+        });
+        await db.session.deleteMany({ where: { userId: targetId } });
+        return user;
+      });
+      return res.json({
+        user: {
+          id: String(updatedUser.id),
+          status: updatedUser.status,
+          banExpiresAt: updatedUser.banExpiresAt,
+        },
+      });
+    } catch (error) {
+      console.error("Admin user ban failed:", error);
+      return res.status(500).json({ error: "Neizdevās bloķēt lietotāju." });
+    }
+  });
+
+  authApp.post("/api/admin/users/:userId/unban", async (req, res) => {
+    try {
+      const admin = await getAuthenticatedUser(req, res);
+      if (!admin) return;
+      if (admin.role !== "ADMIN") {
+        return res.status(403).json({ error: "Šī darbība atļauta tikai administratoriem." });
+      }
+
+      const targetId = parseUserId(req.params.userId);
+      if (targetId === null) {
+        return res.status(400).json({ error: "Norādiet derīgu lietotāju." });
+      }
+      const target = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!target) return res.status(404).json({ error: "Lietotājs nav atrasts." });
+      if (target.role === "ADMIN") {
+        return res.status(400).json({ error: "Administratora konta statuss šeit nav maināms." });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: targetId },
+        data: { status: "ACTIVE", banExpiresAt: null },
+      });
+      return res.json({
+        user: { id: String(updatedUser.id), status: updatedUser.status, banExpiresAt: null },
+      });
+    } catch (error) {
+      console.error("Admin user unban failed:", error);
+      return res.status(500).json({ error: "Neizdevās atbloķēt lietotāju." });
     }
   });
 

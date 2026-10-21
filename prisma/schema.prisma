@@ -52,6 +52,8 @@ model User {
   role                UserRole      @default(USER) @map("tiesibas")
   status              UserStatus    @default(ACTIVE) @map("statuss")
   createdAt           DateTime      @default(now()) @map("izveidots") @db.DateTime(3)
+  lastLoginAt         DateTime?     @map("pedeja_pieslegsanas") @db.DateTime(3)
+  banExpiresAt        DateTime?     @map("blokets_lidz") @db.DateTime(3)
   sentFriendships     Friendship[]  @relation("FriendshipSender")
   receivedFriendships Friendship[]  @relation("FriendshipRecipient")
   matchPlayers        MatchPlayer[]

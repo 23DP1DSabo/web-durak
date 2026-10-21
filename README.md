@@ -30,28 +30,27 @@ Visi šajā datubāzē redz kopīgus lietotāju datus. Migrācijas jākoordinē 
 - Anna Laima Orbidāne (izstrādātāja, backend, frontend).
 
 # Projekta apraksts
-DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts sastāv no 5 lapām: sākumlapa, pieslēgšanās/reģistrācijas lapa, profila/konta lapa, spēles galds un iestatījumi. Ir iespēja spēlēt gan ar anonīmiem lietotājiem, gan ar draugiem. 
+DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projektā ir 7 lapas: sākumlapa, pieslēgšanās/reģistrācijas lapa, draugu lapa, spēles gaidīšanas istaba, spēles galds, noteikumu lapa un iestatījumu lapa. Ir iespēja spēlēt gan ar anonīmiem lietotājiem, gan ar draugiem.
 
 # Lietotāju lomas 
 - viesis;
-- administrators;
-- reģistrēts lietotājs.
+- reģistrēts lietotājs;
+- administrators.
 
 # Izmantotās ārējās tehnoloģijas
 - VScode;
 - GitHub;
 - Trello;
 - Agile + Scrum.
+- Railway
 
 # Izmantotās iekšējās tehnoloģijas
-- React + Vite – Frontend būvēšanas rīki, kas tika izvēlēti to ātruma, vienkāršuma un stabilitātes dēļ;
-- Typescript - uz JS būvēta programmēšanas valoda, kas šķietami atvieglo spēles loģikas noteikšanu un programmas uzturēšanu ilgtermiņā;
+- Vite – Frontend būvēšanas rīks, kas tika izvēlēts tā ātruma, vienkāršuma un stabilitātes dēļ;
 - MySQL datubāze - datubāze nepieciešamo datu glabāšanai, kuras veids izvēlēts pēc iepriekšējās pieredzes;
 - node.js - Standarta ietvars mājaslapu izveidei, kas pilnībā atbalsta Typescript, izvēlēts, tāpēc ka tā vienkāršums šķiet atbilstošs projekta mērogam;
 - Axios - bibliotēka paredzēta HTTP pieprasījumu sūtīšanai, gluži kā “fetch” komanda bet ar papildus ērtību funkcionalitāti;
 - Socket.IO - bibliotēka, kas iespējo lietotāja reāllaika divpusējo saziņu ar serveri. Nepieciešama reāllaika spēlei;
 - Prisma ORM - rīks, paredzēts darbam ar node.js un typescript, lai intuitīvi rakstīt datubāzes are OOP API nevis SQL rindām, potenciāli novēršot vairākas bieži pieļaujamās kļūdas ar sintaksi; 
-- Railway hosting – pakalpojums projekta pārnešanai uz ārējo serveri, kas izvēlēts pēc iesācējiem draudzīgas reputācijas; 
 - Zod – Typescript bibliotēka paredzēta datu validācijai un integritātes uzturēšanai;
 - Vitest – programmas testēšanas rīks.
 # Izmantotās ārējās tehnoloģijas
@@ -59,7 +58,6 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts 
 - VScode - kodēšanas vide;
 - Trello - kanban metodes darba plānotājs.
 
-Datubāzes struktūra ir pielāgota DuraKlash.docx ER modelim: lietotāji, draudzības, spēles un spēļu dalībnieki, kā arī tehniskā sesiju tabula. Lauki, saites, migrācijas un pārbaudes aprakstītas [prisma/DATABASE.md](prisma/DATABASE.md). Pēc šo izmaiņu saņemšanas palaid `npm run db:generate`, `npm run db:migrate` un pārstartē `npm run server`. Reģistrācijā tagad jānorāda arī unikāls lietotājvārds.
 
 ## Multiplayer (2–6 spēlētāji)
 
@@ -95,8 +93,7 @@ noslēdz partiju: šis spēlētājs saņem DURAK, pārējie WIN. Neizšķirtā r
 Gājieni notiek pa apli. Vienā izspēlē kārtis pievieno pašreizējais uzbrucējs;
 pārējie gaida savu kārtu. Padošanas režīmā uzbrukums pāriet nākamajam dalībniekam.
 Spēlētāji bez kārtīm pēc kavas iztukšošanās izstājas kā uzvarētāji; pēdējais ar kārtīm
-ir duraks. Japāņu režīmā saglabātas esošās mastu atšķirības. DuraKlash izvēle pagaidām
-izmanto klasiskos noteikumus; īpašās spējas vēl nav ieviestas.
+ir duraks. Japāņu režīmā saglabātas attiecīgā režīma mastu atšķirības.
 
 Spēļu serverim paredzēts viens Node process. Vairākām instancēm jāievieš kopīgs
 Socket.IO adapteris un slodzes sadales konfigurācija. `npm test` aptver pilnas 2, 3 un

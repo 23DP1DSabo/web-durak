@@ -128,7 +128,6 @@ function renderRoom() {
       const removeButton = document.createElement("button");
       removeButton.type = "button";
       removeButton.className = "remove-player-button";
-      removeButton.textContent = "Izņemt";
       removeButton.setAttribute(
         "aria-label",
         `Izņemt spēlētāju ${player.name}`,
@@ -430,6 +429,9 @@ async function leaveRoom() {
   } catch (error) {
     console.error("Failed to leave room:", error);
     setStatus(`Neizdevās pamest istabu: ${error.message}`);
+    redirected = true;
+    window.clearInterval(refreshTimer);
+    window.location.replace("/");
   }
 }
 
