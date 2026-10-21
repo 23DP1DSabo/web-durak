@@ -148,13 +148,14 @@ export function createRoomsRouter(prisma, { getSessionToken, hashToken } = {}) {
   router.post("/", async (req, res, next) => {
     try {
       const { code, mode, playerId, name, allowGuests = false } = req.body;
+      const validModes = ["classic", "passing", "japan"];
       const user = await getCurrentUser(req);
 
       if (!/^[A-Z0-9]{8}$/.test(code ?? "")) {
         return res.status(400).json({ error: "Nederīgs istabas kods." });
       }
 
-      if (!playerId || !name || !mode) {
+      if (!playerId || !name || !validModes.includes(mode)) {
         return res.status(400).json({ error: "Trūkst obligāto datu." });
       }
 
@@ -301,7 +302,7 @@ router.post("/:code/finish", async (req, res, next) => {
       const { mode, playerId, name } = req.body;
       const user = await getCurrentUser(req);
 
-      const validModes = ["classic", "passing", "japan", "duraklash"];
+      const validModes = ["classic", "passing", "japan"];
 
       if (!validModes.includes(mode)) {
         return res.status(400).json({

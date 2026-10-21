@@ -20,7 +20,6 @@ const modeNames = {
   classic: "Klasiskais duraks",
   passing: "Padošanu duraks",
   japan: "Japāņu duraks",
-  duraklash: "DuraKlash",
 };
 const suitNames = {
   clubs: "kreiči",

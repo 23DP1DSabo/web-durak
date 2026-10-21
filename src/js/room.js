@@ -3,7 +3,6 @@ const modeNames = {
   classic: "Klasiskais duraks",
   passing: "Padošanu duraks",
   japan: "Japāņu duraks",
-  duraklash: "DuraKlash",
 };
 
 const params = new URLSearchParams(location.search);
@@ -18,6 +17,7 @@ const timeLimitInputs = document.querySelectorAll('input[name="time-limit"]');
 const allowGuestsInput = document.querySelector("#allow-guests");
 const beginButton = document.querySelector("#begin-match");
 const statusElement = document.querySelector("#room-status");
+const roomCodeElement = document.querySelector("#room-code");
 
 let room = null;
 let playerName = "Viesis";
@@ -28,6 +28,10 @@ let playerId = localStorage.getItem("durak-player-id");
 if (!playerId) {
   playerId = crypto.randomUUID();
   localStorage.setItem("durak-player-id", playerId);
+}
+
+if (/^[A-Z0-9]{8}$/.test(roomCode)) {
+  roomCodeElement.textContent = roomCode;
 }
 
 function setStatus(message) {
@@ -364,7 +368,7 @@ async function startGame() {
 async function initializeRoom() {
   if (
     !/^[A-Z0-9]{8}$/.test(roomCode) ||
-    !["classic", "passing", "japan", "duraklash"].includes(mode) ||
+    !["classic", "passing", "japan"].includes(mode) ||
     !["host", "player"].includes(params.get("role"))
   ) {
     setStatus("Nederīga istabas saite vai istabas kods.");
@@ -422,7 +426,9 @@ async function initializeRoom() {
       return;
     }
 
-    setStatus(error.message);
+    setStatus(isHost
+      ? `Kods ${roomCode} ir ģenerēts, bet istabu serverī neizdevās izveidot: ${error.message}`
+      : error.message);
   }
 
 
@@ -468,5 +474,3 @@ allowGuestsInput.addEventListener("change", updateSettings);
 beginButton.addEventListener("click", startGame);
 
 initializeRoom();
-
-

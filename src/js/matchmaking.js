@@ -2,7 +2,6 @@ const modeNames = {
   classic: "Klasiskais duraks",
   passing: "Padošanu duraks",
   japan: "Japāņu duraks",
-  duraklash: "DuraKlash",
 };
 
 const roomDialog = document.querySelector("#room-choice-dialog");
@@ -212,7 +211,6 @@ const quickplayButtons = {
   "quick-game-classic": "classic",
   "quick-game-passing": "passing",
   "quick-game-japan": "japan",
-  "quick-game-duraklash": "duraklash",
 };
 
 for (const [buttonId, mode] of Object.entries(quickplayButtons)) {
