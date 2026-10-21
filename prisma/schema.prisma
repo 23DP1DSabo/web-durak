@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client"
+  previewFeatures = ["relationJoins"]
   output   = "../generated/prisma"
 }
 
@@ -83,6 +84,8 @@ model Match {
   startedAt        DateTime?     @map("sakums") @db.DateTime(3)
   endedAt          DateTime?     @map("beigas") @db.DateTime(3)
   allowGuests      Boolean       @default(false) @map("atlaut_viesus")
+  gameState        Json?         @map("speles_stavoklis")
+  version          Int           @default(0) @map("versija")
   players          MatchPlayer[]
 
   @@index([status, createdAt])

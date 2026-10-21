@@ -9,6 +9,8 @@ import { promisify } from "node:util";
 import express from "express";
 
 import { createFriendsRouter } from "./router/friends.js";
+import { GameError } from "./lib/multiplayer.js";
+import { createMatchService } from "./lib/matches.js";
 import { createRoomsRouter } from "./router/room.js";
 
 
@@ -18,7 +20,7 @@ export function createAuthApp(prisma) {
   const scryptAsync = promisify(scrypt);
 
   authApp.disable("x-powered-by");
-  authApp.use("/api/auth", (req, res, next) => {
+  authApp.use("/api", (req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
     if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method) && (req.get("sec-fetch-site") === "cross-site"
       || (req.get("origin") && req.get("origin") !== (process.env.APP_ORIGIN || `${req.protocol}://${req.get("host")}`)))) {
@@ -338,16 +340,16 @@ export function createAuthApp(prisma) {
     }),
   );
 
+  const matches = createMatchService(prisma);
+  authApp.locals.matches = matches;
   authApp.use(
     "/api/rooms",
-    createRoomsRouter(prisma, {
-      getSessionToken,
-      hashToken,
-    })
+    createRoomsRouter(prisma, { service: matches })
   );
 
 
   authApp.use((error, req, res, next) => {
+    if (error instanceof GameError) return res.status(error.status).json({error:error.message});
     if (error.type === "entity.too.large") return res.status(413).json({ error: "Pieprasījums ir pārāk liels." });
     if (error.type === "entity.parse.failed") return res.status(400).json({ error: "Nederīgs JSON pieprasījums." });
     console.error("API error:", error);

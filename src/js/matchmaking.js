@@ -15,14 +15,17 @@ let selectedMode = "classic";
 
 function openRoomPage(code, role) {
   if (role === "host") {
-    sessionStorage.setItem(`durak-room:${code}`, JSON.stringify({
-      code,
-      mode: selectedMode,
-      timeLimitSeconds: 600,
-      status: "waiting",
-      createdAt: Date.now(),
-      players: [],
-    }));
+    sessionStorage.setItem(
+      `durak-room:${code}`,
+      JSON.stringify({
+        code,
+        mode: selectedMode,
+        timeLimitSeconds: 600,
+        status: "waiting",
+        createdAt: Date.now(),
+        players: [],
+      }),
+    );
   }
 
   const roomUrl = new URL("./room.html", window.location.href);
@@ -39,7 +42,7 @@ async function checkRoomAccess(code) {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
-    }
+    },
   );
 
   const data = await response.json().catch(() => ({}));
@@ -50,7 +53,6 @@ async function checkRoomAccess(code) {
 
   return data;
 }
-
 
 function getPlayerId() {
   let playerId = localStorage.getItem("durak-player-id");
@@ -67,25 +69,13 @@ async function getQuickplayPlayerName() {
   let name = sessionStorage.getItem("durak-guest-name");
 
   if (!name) {
-    const digits =
-      crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
+    const digits = crypto.getRandomValues(new Uint32Array(1))[0] % 100000;
 
     name = `Viesis${String(digits).padStart(5, "0")}`;
     sessionStorage.setItem("durak-guest-name", name);
   }
 
-  try {
-    const response = await fetch("/api/auth/me", {
-      credentials: "same-origin",
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      name = data.user?.name || data.user?.username || name;
-    }
-  } catch {
-    // Keep the guest name if account lookup fails.
-  }
+  // The server chooses the authenticated account name from the session.
 
   return name;
 }
@@ -116,9 +106,7 @@ async function quickplay(mode, button) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(
-        data.error || "Neizdevās atrast spēles istabu."
-      );
+      throw new Error(data.error || "Neizdevās atrast spēles istabu.");
     }
 
     // Navigate using the room code returned by the server.
@@ -132,12 +120,14 @@ async function quickplay(mode, button) {
   }
 }
 
-
 function createRoomCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const randomValues = new Uint8Array(8);
   crypto.getRandomValues(randomValues);
-  return Array.from(randomValues, (value) => alphabet[value % alphabet.length]).join("");
+  return Array.from(
+    randomValues,
+    (value) => alphabet[value % alphabet.length],
+  ).join("");
 }
 
 document.querySelectorAll("[data-room-mode]").forEach((button) => {
@@ -172,7 +162,10 @@ roomDialog.addEventListener("click", (event) => {
 });
 
 roomCodeInput.addEventListener("input", () => {
-  roomCodeInput.value = roomCodeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  roomCodeInput.value = roomCodeInput.value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 8);
   joinRoomMessage.hidden = true;
 });
 
@@ -206,7 +199,6 @@ joinRoomForm.addEventListener("submit", async (event) => {
     if (submitButton) submitButton.disabled = false;
   }
 });
-
 
 const quickplayButtons = {
   "quick-game-classic": "classic",

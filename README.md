@@ -19,7 +19,7 @@ Serveris un Prisma migrācijas izmanto vienu `DATABASE_URL`. Railway MySQL piesl
 
 Izveidots [DuraKlash projekts](https://railway.com/project/20e15867-31df-42e5-b36f-8c37a8d8de96) ar MySQL servisu. Railway datubāzes nosaukums ir `railway`; tā paredzēta kopīgai projekta izstrādei. Savienojums no komandas datoriem izmanto publisko TCP adresi un `duraklash_app` lietotāju, kura tiesības ierobežotas ar šo datubāzi. Railway vides sākotnējais nosaukums `production` pats par sevi nenozīmē, ka lietotne ir publicēta.
 
-Komandas biedram jāsaņem šīs izmaiņas no Git un privāti jāsaņem projekta `DATABASE_URL` no īpašnieka. To ievieto savā `.env`, kas izveidots pēc `.env.example`, saglabājot `APP_ORIGIN=http://localhost:3000` un `PORT=3002`. Tad palaiž `npm ci`, `npm run db:generate`, `npm run db:migrate` un atsevišķos termināļos `npm run server` un `npm run dev`. Lokāls XAMPP vai Docker šim pieslēgumam nav vajadzīgs.
+Komandas biedram jāsaņem šīs izmaiņas no Git un privāti jāsaņem projekta `DATABASE_URL` no īpašnieka. To ievieto savā `.env`, kas izveidots pēc `.env.example`, saglabājot `APP_ORIGIN=http://localhost:3000` un `PORT=3003`. Tad palaiž `npm ci`, `npm run db:generate`, `npm run db:migrate` un atsevišķos termināļos `npm run server` un `npm run dev`. Lokāls XAMPP vai Docker šim pieslēgumam nav vajadzīgs.
 
 Visi šajā datubāzē redz kopīgus lietotāju datus. Migrācijas jākoordinē komandā; nelieto `prisma migrate reset` kopīgajā datubāzē. Piekļuves dati nav jāiekļauj Git, sarakstes ekrānattēlos vai publiskajā README. Vecās lokālās datubāzes konti nav pārnesti. Šajā datorā iepriekšējā konfigurācija saglabāta Git ignorētā `.env.local-backup-20261016` failā.
 
@@ -60,3 +60,65 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts 
 - Trello - kanban metodes darba plānotājs.
 
 Datubāzes struktūra ir pielāgota DuraKlash.docx ER modelim: lietotāji, draudzības, spēles un spēļu dalībnieki, kā arī tehniskā sesiju tabula. Lauki, saites, migrācijas un pārbaudes aprakstītas [prisma/DATABASE.md](prisma/DATABASE.md). Pēc šo izmaiņu saņemšanas palaid `npm run db:generate`, `npm run db:migrate` un pārstartē `npm run server`. Reģistrācijā tagad jānorāda arī unikāls lietotājvārds.
+
+## Multiplayer (2–6 spēlētāji)
+
+Pēc atjauninājuma palaid `npm ci`, `npm run db:generate` un `npm run db:migrate`,
+pēc tam pārstartē `npm run server` un `npm run dev`. Migrācija pievieno spēles
+stāvokļa JSON un versiju; esošie konti netiek dzēsti.
+
+1. Atver sākumlapu un izveido istabu. Ieslēdz viesu atļauju, ja draugi spēlēs bez konta.
+2. Pārējie atver to pašu vietni un pievienojas ar istabas kodu.
+3. Ar 2–6 dalībniekiem izveidotājs nospiež **Sākt multiplayer**. Ar vienu dalībnieku
+   poga **Spēlēt pret botu** saglabā iepriekšējo vietējo spēli.
+4. Katrs redz savas kārtis, citu kāršu skaitu, kopīgo galdu un servera noteikto gājienu.
+
+Pārbaude vienā datorā: izmanto divus dažādus pārlūkus vai parasto un privāto logu.
+Viena pārlūka parastās cilnes koplieto konta/viesa identitāti un nav divi spēlētāji.
+Viesu identitāte tagad ir HttpOnly sīkdatnē; vecajām viesu istabām jāizveido jauna istaba.
+
+Visiem spēlētājiem jāpieslēdzas **vienam lietotnes serverim**. Kopīga Railway DB pati
+par sevi nav publicēta spēles vietne. Vietējā tīklā vienā datorā palaiž abus serverus,
+`.env` iestata `APP_ORIGIN=http://<datora-LAN-IP>:3000`, pārstartē serveri un visi,
+arī saimnieks, atver šo adresi. Ugunsmūrī jābūt atļautam portam 3000 privātajam tīklam.
+Ārpus vietējā tīkla jāpublicē lietotne ar WebSocket atbalstu un jāiestata tās HTTPS
+adrese kā `APP_ORIGIN`. DB piekļuves datus pārlūkā neievada.
+
+Multiplayer izmanto Socket.IO. Serveris izdala kārtis, pārbauda gājiena kārtību,
+kāršu piederību un noteikumus; pretinieku kārtis un kavas secība netiek nosūtīta klientam.
+Katrs pieņemtais gājiens tiek saglabāts MySQL ar atomāru versijas pārbaudi.
+Spēles pabeigšana un visu dalībnieku rezultāti tiek saglabāti vienā transakcijā.
+Lapas pārlāde vai īslaicīgs savienojuma zudums atjauno partiju. Laiks turpina ritēt arī
+bez savienojuma un servera pārstartēšanas laikā. Laika izbeigšanās vai padošanās
+noslēdz partiju: šis spēlētājs saņem DURAK, pārējie WIN. Neizšķirtā rezultāts paliek tukšs.
+
+Gājieni notiek pa apli. Vienā izspēlē kārtis pievieno pašreizējais uzbrucējs;
+pārējie gaida savu kārtu. Padošanas režīmā uzbrukums pāriet nākamajam dalībniekam.
+Spēlētāji bez kārtīm pēc kavas iztukšošanās izstājas kā uzvarētāji; pēdējais ar kārtīm
+ir duraks. Japāņu režīmā saglabātas esošās mastu atšķirības. DuraKlash izvēle pagaidām
+izmanto klasiskos noteikumus; īpašās spējas vēl nav ieviestas.
+
+Spēļu serverim paredzēts viens Node process. Vairākām instancēm jāievieš kopīgs
+Socket.IO adapteris un slodzes sadales konfigurācija. `npm test` aptver pilnas 2, 3 un
+6 spēlētāju partijas, privātās kārtis, Socket.IO klientus, atkārtotu pieslēgšanos,
+autorizāciju un vienlaicīgus gājienus. `npm run test:multiplayer:db` izveido pagaidu
+istabu konfigurētajā MySQL, pārbauda spēli un izdzēš tikai šīs pārbaudes istabu.
+Papildu informācija: [multiplayer datubāzes lauki](prisma/MULTIPLAYER.md).
+
+
+Ja Vite rāda `socket hang up` vai 502, pārbaudi API serveri un porta konfliktus.
+API noklusējuma ports ir 3003; Vite HTTP un Socket.IO starpniekserveris nolasa to no
+`.env` lauka `PORT`. Mainot portu, pārstartē gan `npm run server`, gan `npm run dev`.
+DB savienojuma pārbaude: `http://localhost:3000/api/health/db`.
+
+Veiktspēja: serveris atkārtoti izmanto pēdējo saglabāto spēles stāvokli, un parastam
+viesa gājienam vajadzīgs viens nosacīts DB ieraksts. Gājienu apstiprina tikai pēc
+saglabāšanas; konta sesiju joprojām pārbauda DB. Saistītos datus Prisma ielādē kopā
+(`relationJoins`), tāpēc pēc atjauninājuma jāpalaiž `npm run db:generate` un
+jāpārstartē API. Šim paātrinājumam papildu DB migrācija nav vajadzīga.
+Laika beigas apstrādā katras partijas taimeris; termiņus atjauno servera startā un
+pārbauda ik pēc 30 sekundēm. Savienojuma noildzes un atkārtota izmantošana ir
+pielāgotas attālinātai DB; noklusējumus skatīt `lib/prisma.ts`.
+
+Lokālam salīdzinājumam PowerShell: `$env:DURAK_BENCHMARK="1"; npm run test:multiplayer:db`.
+Tas izvada darbību laikus; tie ir atkarīgi no tīkla un DB atrašanās vietas.

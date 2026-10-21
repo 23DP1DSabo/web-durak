@@ -1,7 +1,8 @@
+import { fetchCurrentUser } from "./current-user.js";
 const link = document.querySelector("#account-link");
 async function refreshAccount() {
   try {
-    const response = await fetch("/api/auth/me", { cache: "no-store" });
+    const response = await fetchCurrentUser();
     if (response.status === 401) {
       link.textContent = "Pieslēgties";
       return;

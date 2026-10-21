@@ -2059,3 +2059,19 @@ body[data-theme="dark"] .room-dialog .room-code {
     color: #e4e9e5;
     background: #182126;
 }
+
+/* Shared game table: other seats never receive hidden card values. */
+.multiplayer-opponents { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: min(96%, 1000px); }
+.multiplayer-seat { min-width: 125px; max-width: 200px; padding: 10px; border: 2px solid transparent; border-radius: 12px; background: rgba(0,0,0,.65); color: white; text-align: center; }
+.multiplayer-seat.is-active { border-color: #e9c46a; }
+.multiplayer-seat h2 { font-size: 1rem; margin: 0 0 4px; overflow-wrap: anywhere; }
+.multiplayer-seat p { margin: 4px 0; font-size: .85rem; }
+.multiplayer-card-backs { display: flex; justify-content: center; margin: 6px 0 0; }
+.multiplayer-card-backs .card-back { width: 22px; height: 32px; margin-left: -5px; }
+.multiplayer-connection { font-size: .85rem; margin: 0; }
+.game-table-page:has(.multiplayer-opponents) .table-stage { min-height: 850px; }
+@media(max-width:600px) {
+  .multiplayer-seat { min-width: 90px; padding: 5px; }
+  .multiplayer-opponents { gap: 5px; }
+  .game-table-page:has(.multiplayer-opponents) .table-stage { min-height: 980px; }
+}

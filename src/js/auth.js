@@ -1,3 +1,4 @@
+import { fetchCurrentUser } from "./current-user.js";
 const loginForm = document.querySelector("#login-form");
 const registerForm = document.querySelector("#register-form");
 const account = document.querySelector("#account");
@@ -6,14 +7,23 @@ let busy = false;
 
 function setBusy(value) {
   busy = value;
-  document.querySelectorAll("#auth-panel button").forEach((button) => { button.disabled = value; });
-  document.querySelector("#auth-panel").setAttribute("aria-busy", String(value));
+  document.querySelectorAll("#auth-panel button").forEach((button) => {
+    button.disabled = value;
+  });
+  document
+    .querySelector("#auth-panel")
+    .setAttribute("aria-busy", String(value));
 }
 
 async function request(endpoint, options) {
-  const response = await fetch(endpoint, { credentials: "same-origin", ...options });
-  const result = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) throw new Error(result?.error || "Neizdevās sazināties ar serveri.");
+  const response = await fetch(endpoint, {
+    credentials: "same-origin",
+    ...options,
+  });
+  const result =
+    response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok)
+    throw new Error(result?.error || "Neizdevās sazināties ar serveri.");
   return result;
 }
 
@@ -49,7 +59,11 @@ async function submitAuth(form, endpoint) {
     loginForm.reset();
     registerForm.reset();
     showAccount(result.user);
-    showMessage(form === registerForm ? "Konts izveidots. Jūs esat pieslēdzies." : "Pieslēgšanās veiksmīga.");
+    showMessage(
+      form === registerForm
+        ? "Konts izveidots. Jūs esat pieslēdzies."
+        : "Pieslēgšanās veiksmīga.",
+    );
   } catch (error) {
     showMessage(error.message || "Neizdevās sazināties ar serveri.");
   } finally {
@@ -61,7 +75,9 @@ document.querySelector("#show-login").addEventListener("click", () => {
   loginForm.hidden = false;
   registerForm.hidden = true;
   document.querySelector("#show-login").setAttribute("aria-pressed", "true");
-  document.querySelector("#show-register").setAttribute("aria-pressed", "false");
+  document
+    .querySelector("#show-register")
+    .setAttribute("aria-pressed", "false");
   showMessage("");
 });
 
@@ -92,7 +108,9 @@ document.querySelector("#logout").addEventListener("click", async () => {
     document.querySelector(".auth-tabs").hidden = false;
     loginForm.hidden = false;
     document.querySelector("#show-login").setAttribute("aria-pressed", "true");
-    document.querySelector("#show-register").setAttribute("aria-pressed", "false");
+    document
+      .querySelector("#show-register")
+      .setAttribute("aria-pressed", "false");
     showMessage("Jūs esat izrakstījies.");
   } catch (error) {
     showMessage(error.message || "Neizdevās izrakstīties.");
@@ -102,7 +120,7 @@ document.querySelector("#logout").addEventListener("click", async () => {
 });
 
 setBusy(true);
-fetch("/api/auth/me")
+fetchCurrentUser()
   .then((response) => {
     if (response.status === 401) return null;
     if (!response.ok) throw new Error("Session check failed");

@@ -1,3 +1,4 @@
+import { fetchCurrentUser } from "./current-user.js";
 const themes = new Set(["classic", "light", "dark"]);
 const storageKey = "durak-theme";
 
@@ -13,7 +14,7 @@ export function setTheme(theme) {
 const savedTheme = localStorage.getItem(storageKey);
 setTheme(themes.has(savedTheme) ? savedTheme : "classic");
 
-fetch("/api/auth/me", { cache: "no-store" })
+fetchCurrentUser()
   .then(async (response) => {
     if (!response.ok) return;
     const { user } = await response.json();

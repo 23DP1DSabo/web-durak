@@ -1,3 +1,4 @@
+import { fetchCurrentUser } from "./current-user.js";
 import { setTheme } from "./theme.js";
 
 const accountSettings = document.querySelector("#account-settings");
@@ -13,15 +14,19 @@ const savedThemeInput = document.querySelector(
 if (savedThemeInput) savedThemeInput.checked = true;
 
 async function request(url, options = {}) {
-  const response = await fetch(url, {
-    credentials: "same-origin",
-    ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-  });
-  const result = response.status === 204 ? null : await response.json().catch(() => null);
+  const response =
+    url === "/api/auth/me"
+      ? await fetchCurrentUser()
+      : await fetch(url, {
+          credentials: "same-origin",
+          ...options,
+          headers: {
+            ...(options.body ? { "Content-Type": "application/json" } : {}),
+            ...options.headers,
+          },
+        });
+  const result =
+    response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(result?.error || "Neizdevās sazināties ar serveri.");
   }
@@ -30,8 +35,11 @@ async function request(url, options = {}) {
 
 function setBusy(value) {
   busy = value;
-  document.querySelectorAll("#account-settings button, #account-settings input")
-    .forEach((control) => { control.disabled = value; });
+  document
+    .querySelectorAll("#account-settings button, #account-settings input")
+    .forEach((control) => {
+      control.disabled = value;
+    });
   accountSettings.setAttribute("aria-busy", String(value));
 }
 
@@ -46,7 +54,9 @@ async function loadAccount() {
     accountSettings.hidden = false;
     signInPrompt.hidden = true;
     document.querySelector("#current-username").textContent = user.username;
-    const selectedTheme = document.querySelector(`input[name="theme"][value="${user.theme}"]`);
+    const selectedTheme = document.querySelector(
+      `input[name="theme"][value="${user.theme}"]`,
+    );
     if (selectedTheme) selectedTheme.checked = true;
   } catch (error) {
     if (error.message === "Jūs neesat pieslēdzies.") {
@@ -67,7 +77,9 @@ usernameForm.addEventListener("submit", async (event) => {
   try {
     const { user } = await request("/api/auth/username", {
       method: "PATCH",
-      body: JSON.stringify({ username: new FormData(usernameForm).get("username") }),
+      body: JSON.stringify({
+        username: new FormData(usernameForm).get("username"),
+      }),
     });
     document.querySelector("#current-username").textContent = user.username;
     usernameForm.reset();
