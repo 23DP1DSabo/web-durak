@@ -417,3 +417,17 @@ test.each(["committed change", "server restart"])(
     expect(ended.players.map((p) => p.result).sort()).toEqual(["DURAK", "WIN"]);
   },
 );
+
+test("removed DuraKlash mode is rejected by room creation and quickplay", async () => {
+  const body = {
+    code: "OLDMODE1",
+    mode: "duraklash",
+    name: "Player",
+    allowGuests: true,
+  };
+  expect((await request("/", body)).status).toBe(400);
+  expect((await request("/quickplay", body)).status).toBe(400);
+  expect(
+    await db.match.findUnique({ where: { roomCode: body.code } }),
+  ).toBeNull();
+});

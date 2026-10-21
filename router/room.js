@@ -7,7 +7,7 @@ import {
   publicRoom,
 } from "../lib/matches.js";
 
-const modes = ["classic", "passing", "japan", "duraklash"];
+const modes = ["classic", "passing", "japan"];
 const fail = (message, status = 409) => {
   throw new GameError(message, status);
 };
