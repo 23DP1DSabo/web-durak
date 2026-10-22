@@ -75,12 +75,13 @@ Pārbaude vienā datorā: izmanto divus dažādus pārlūkus vai parasto un priv
 Viena pārlūka parastās cilnes koplieto konta/viesa identitāti un nav divi spēlētāji.
 Viesu identitāte tagad ir HttpOnly sīkdatnē; vecajām viesu istabām jāizveido jauna istaba.
 
+
 Visiem spēlētājiem jāpieslēdzas **vienam lietotnes serverim**. Kopīga Railway DB pati
 par sevi nav publicēta spēles vietne. Vietējā tīklā vienā datorā palaiž abus serverus,
-`.env` iestata `APP_ORIGIN=http://<datora-LAN-IP>:3000`, pārstartē serveri un visi,
-arī saimnieks, atver šo adresi. Ugunsmūrī jābūt atļautam portam 3000 privātajam tīklam.
+pārstartē API serveri un spēlētāji, tostarp saimnieks, atver atbilstošo atļauto adresi.
+Ugunsmūrī jābūt atļautam portam 3000 privātajam tīklam.
 Ārpus vietējā tīkla jāpublicē lietotne ar WebSocket atbalstu un jāiestata tās HTTPS
-adrese kā `APP_ORIGIN`. DB piekļuves datus pārlūkā neievada.
+adrese kā viena no `APP_ORIGIN` vērtībām. DB piekļuves datus pārlūkā neievada.
 
 Multiplayer izmanto Socket.IO. Serveris izdala kārtis, pārbauda gājiena kārtību,
 kāršu piederību un noteikumus; pretinieku kārtis un kavas secība netiek nosūtīta klientam.

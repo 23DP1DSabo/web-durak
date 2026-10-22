@@ -1,6 +1,7 @@
 
 import { Router } from "express";
 import { createHash } from "node:crypto";
+import { allowedOrigins, isAllowedOrigin } from "../lib/origins.js";
 
 export function createFriendsRouter(prisma, {
   getSessionToken,
@@ -70,12 +71,14 @@ export function createFriendsRouter(prisma, {
     res.setHeader("Cache-Control", "no-store");
 
     const origin = req.get("origin");
-    const expectedOrigin =
-      process.env.APP_ORIGIN || `${req.protocol}://${req.get("host")}`;
+    const origins = allowedOrigins(
+      process.env.APP_ORIGIN,
+      `${req.protocol}://${req.get("host")}`,
+    );
 
     if (
       req.get("sec-fetch-site") === "cross-site" ||
-      (origin && origin !== expectedOrigin)
+      !isAllowedOrigin(origin, origins)
     ) {
       return res.status(403).json({
         error: "Pieprasījuma izcelsme nav atļauta.",

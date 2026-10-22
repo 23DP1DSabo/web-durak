@@ -11,6 +11,7 @@ import express from "express";
 import { createFriendsRouter } from "./router/friends.js";
 import { GameError } from "./lib/multiplayer.js";
 import { createMatchService } from "./lib/matches.js";
+import { allowedOrigins, isAllowedOrigin } from "./lib/origins.js";
 import { createRoomsRouter } from "./router/room.js";
 
 
@@ -33,8 +34,12 @@ export function createAuthApp(prisma) {
   authApp.disable("x-powered-by");
   authApp.use("/api", (req, res, next) => {
     res.setHeader("Cache-Control", "no-store");
+    const origins = allowedOrigins(
+      process.env.APP_ORIGIN,
+      `${req.protocol}://${req.get("host")}`,
+    );
     if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method) && (req.get("sec-fetch-site") === "cross-site"
-      || (req.get("origin") && req.get("origin") !== (process.env.APP_ORIGIN || `${req.protocol}://${req.get("host")}`)))) {
+      || !isAllowedOrigin(req.get("origin"), origins))) {
       return res.status(403).json({ error: "Pieprasījuma izcelsme nav atļauta." });
     }
     next();

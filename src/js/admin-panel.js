@@ -99,6 +99,7 @@ function renderUsers(users) {
       actionButton.textContent = "Administrators";
     } else if (user.status === "BANNED") {
       actionButton.textContent = "Atbloķēt";
+      actionButton.addEventListener("click", () => updateBan(user));
     } else {
       actionButton.classList.add("admin-stamp-button");
       const stamp = document.createElement("img");

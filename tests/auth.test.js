@@ -142,7 +142,7 @@ test("registration rolls back when session storage fails", async () => {
   expect(users).toHaveLength(0);
 });
 test("blocks cross-origin requests and accepts configured origin", async () => {
-  vi.stubEnv("APP_ORIGIN", "http://localhost:3000");
+  vi.stubEnv("APP_ORIGIN", "http://localhost:3000, http://192.168.1.105:3000");
   expect((await post("register", credentials, null, { origin: "https://other.example" })).status).toBe(403);
   expect((await post("register", credentials, null, { "sec-fetch-site": "cross-site" })).status).toBe(403);
   expect((await fetch(`${base}/api/auth/theme`, {
@@ -151,6 +151,11 @@ test("blocks cross-origin requests and accepts configured origin", async () => {
     body: JSON.stringify({ theme: "LIGHT" }),
   })).status).toBe(403);
   expect((await post("register", credentials, null, { origin: "http://localhost:3000" })).status).toBe(201);
+  expect((await post("register", {
+    ...credentials,
+    email: "lan-player@example.com",
+    username: "lanplayer",
+  }, null, { origin: "http://192.168.1.105:3000" })).status).toBe(201);
 });
 test("limits repeated attempts and returns JSON for malformed requests", async () => {
   const invalid = await fetch(`${base}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{" });

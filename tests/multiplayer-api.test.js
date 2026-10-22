@@ -112,7 +112,10 @@ beforeEach(async () => {
   db = database();
   app = createAuthApp(db);
   server = createServer(app);
-  rt = attachRealtime(server, app.locals.matches, { tickMs: 60000 });
+  rt = attachRealtime(server, app.locals.matches, {
+    origin: "http://localhost:3000,http://192.168.1.105:3000",
+    tickMs: 60000,
+  });
   sockets = [];
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -167,6 +170,12 @@ async function connect(cookie, origin = "http://localhost:3000") {
 }
 const join = (s) =>
   s.timeout(3000).emitWithAck("game:join", { code: "TESTROOM" });
+
+test("Socket.IO accepts each configured browser origin", async () => {
+  const { a } = await setup();
+  const socket = await connect(a.cookie, "http://192.168.1.105:3000");
+  expect((await join(socket)).game.selfId).toBeTruthy();
+});
 
 test("two browsers receive shared moves, private hands and restored state after reconnect", async () => {
   const { a, b } = await setup();
