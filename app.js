@@ -220,7 +220,10 @@ export function createAuthApp(prisma) {
       }
       if (user.status === "BANNED") {
         if (!user.banExpiresAt || user.banExpiresAt > new Date()) {
-          return res.status(403).json({ error: "Šis konts ir bloķēts." });
+          return res.status(403).json({
+            error: "Šis konts ir bloķēts.",
+            banExpiresAt: user.banExpiresAt ?? null,
+          });
         }
         await prisma.user.update({
           where: { id: user.id },

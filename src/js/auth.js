@@ -22,13 +22,43 @@ async function request(endpoint, options) {
   });
   const result =
     response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok)
-    throw new Error(result?.error || "Neizdevās sazināties ar serveri.");
+  if (!response.ok) {
+    const error = new Error(result?.error || "Neizdevās sazināties ar serveri.");
+    if (result && Object.hasOwn(result, "banExpiresAt")) {
+      error.banExpiresAt = result.banExpiresAt;
+    }
+    throw error;
+  }
   return result;
 }
 
 function showMessage(text) {
   message.textContent = text;
+}
+
+function formatBanTime(banExpiresAt) {
+  const expiresAt = new Date(banExpiresAt);
+  if (Number.isNaN(expiresAt.getTime())) return null;
+
+  let secondsRemaining = Math.max(1, Math.ceil((expiresAt.getTime() - Date.now()) / 1000));
+  const units = [
+    ["diena", 24 * 60 * 60],
+    ["stunda", 60 * 60],
+    ["minūte", 60],
+    ["sekunde", 1],
+  ];
+  const parts = [];
+
+  for (const [label, unitSeconds] of units) {
+    const amount = Math.floor(secondsRemaining / unitSeconds);
+    if (amount > 0) {
+      parts.push(`${amount} ${label}${amount === 1 ? "" : "s"}`);
+      secondsRemaining %= unitSeconds;
+      if (parts.length === 2) break;
+    }
+  }
+
+  return parts.join(" ");
 }
 
 function showAccount(user) {
@@ -65,7 +95,13 @@ async function submitAuth(form, endpoint) {
         : "Pieslēgšanās veiksmīga.",
     );
   } catch (error) {
-    showMessage(error.message || "Neizdevās sazināties ar serveri.");
+    if (endpoint === "/api/auth/login" && Object.hasOwn(error, "banExpiresAt")) {
+      showMessage(error.banExpiresAt === null
+        ? "Šis konts ir bloķēts pastāvīgi."
+        : `Šis konts ir bloķēts vēl ${formatBanTime(error.banExpiresAt) || "īslaicīgi"}.`);
+    } else {
+      showMessage(error.message || "Neizdevās sazināties ar serveri.");
+    }
   } finally {
     setBusy(false);
   }

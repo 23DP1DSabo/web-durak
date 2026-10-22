@@ -181,7 +181,12 @@ test("username is required and unique, and registration cannot grant administrat
 test("banned accounts cannot sign in or reuse an existing session", async () => {
   const cookie = cookieOf(await post("register"));
   users[0].status = "BANNED";
-  expect((await post("login")).status).toBe(403);
+  const response = await post("login");
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({
+    error: "Šis konts ir bloķēts.",
+    banExpiresAt: null,
+  });
   expect((await me(cookie)).status).toBe(401);
   expect(sessions.size).toBe(0);
 });
@@ -272,13 +277,27 @@ test("admin can apply temporary and permanent bans, revoke sessions, and unban u
   expect(users[1].status).toBe("BANNED");
   expect(users[1].banExpiresAt.getTime()).toBeGreaterThan(Date.now());
   expect([...sessions.values()].some((session) => session.userId === 2n)).toBe(false);
-  expect((await post("login", { ...credentials, email: "target@example.com" })).status).toBe(403);
+  const loginResponse = await post("login", { ...credentials, email: "target@example.com" });
+  expect(loginResponse.status).toBe(403);
+  expect(await loginResponse.json()).toEqual({
+    error: "Šis konts ir bloķēts.",
+    banExpiresAt: users[1].banExpiresAt.toISOString(),
+  });
   expect((await me(userCookie)).status).toBe(401);
 
   const permanent = await endpoint("2", "ban", { duration: "permanent" });
   expect(permanent.status).toBe(200);
   expect(users[1].status).toBe("BANNED");
   expect(users[1].banExpiresAt).toBeNull();
+  const permanentlyBannedLogin = await post("login", {
+    ...credentials,
+    email: "target@example.com",
+  });
+  expect(permanentlyBannedLogin.status).toBe(403);
+  expect(await permanentlyBannedLogin.json()).toEqual({
+    error: "Šis konts ir bloķēts.",
+    banExpiresAt: null,
+  });
 
   expect((await endpoint("2", "unban")).status).toBe(200);
   expect(users[1].status).toBe("ACTIVE");
