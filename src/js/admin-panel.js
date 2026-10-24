@@ -1,9 +1,22 @@
+import toBanStamp from "../images/to_ban.png";
+import unbanStamp from "../images/unban.png";
+
 const dialog = document.querySelector("#admin-users-dialog");
 const openButton = document.querySelector("#admin-users-open");
 const closeButton = document.querySelector("#admin-users-close");
 const randomBanButton = document.querySelector("#admin-random-ban");
 const status = document.querySelector("#admin-users-status");
 const userList = document.querySelector("#admin-users-list");
+const userSearch = document.querySelector("#admin-user-search");
+const sortToggle = document.querySelector("#admin-user-sort-toggle");
+const sortMenu = document.querySelector("#admin-user-sort-menu");
+const sortBy = document.querySelector("#admin-user-sort-by");
+const sortDirection = document.querySelector("#admin-user-sort-direction");
+const filterToggle = document.querySelector("#admin-user-filter-toggle");
+const filterMenu = document.querySelector("#admin-user-filter-menu");
+const accountFilter = document.querySelector("#admin-user-filter-account");
+const onlineFilter = document.querySelector("#admin-user-filter-online");
+const loginFilter = document.querySelector("#admin-user-filter-login");
 let loading = false;
 let currentUsers = [];
 const banDurations = [
@@ -30,7 +43,7 @@ function addCell(row, content, className = "") {
 function renderUsers(users) {
   userList.replaceChildren();
 
-  for (const user of users) {
+  for (const user of sortUsers(users)) {
     const row = document.createElement("tr");
     const avatarCell = document.createElement("td");
     const avatar = document.createElement("span");
@@ -65,12 +78,23 @@ function renderUsers(users) {
     const accountStatus = document.createElement("span");
     if (user.status === "ACTIVE") {
       accountStatus.textContent = "Aktīvs";
-    } else if (user.banExpiresAt) {
-      accountStatus.textContent = `Bloķēts līdz ${new Date(user.banExpiresAt).toLocaleString()}`;
     } else {
-      accountStatus.textContent = "Bloķēts pastāvīgi";
+      accountStatus.textContent =
+        user.banExpiresAt
+          ? `Bloķēts līdz ${new Date(user.banExpiresAt).toLocaleString()}`
+          : "Bloķēts pastāvīgi";
     }
     addCell(row, accountStatus);
+    row.dataset.searchText = [
+      user.username,
+      user.status,
+      user.status === "ACTIVE" ? "aktīvs active" : "bloķēts banned blocked",
+      online.textContent,
+      user.isOnline ? "online" : "offline",
+    ].join(" ").toLocaleLowerCase();
+    row.dataset.accountStatus = user.status === "ACTIVE" ? "active" : "banned";
+    row.dataset.onlineStatus = user.isOnline ? "online" : "offline";
+    row.dataset.hasLogin = user.lastLoginAt ? "true" : "false";
 
     const lastLogin = user.lastLoginAt
       ? new Date(user.lastLoginAt).toLocaleString()
@@ -98,13 +122,19 @@ function renderUsers(users) {
     if (user.role === "ADMIN") {
       actionButton.textContent = "Administrators";
     } else if (user.status === "BANNED") {
-      actionButton.textContent = "Atbloķēt";
+      actionButton.classList.add("admin-stamp-button");
+      const stamp = document.createElement("img");
+      stamp.className = "admin-ban-stamp";
+      stamp.src = unbanStamp;
+      stamp.alt = "";
+      actionButton.setAttribute("aria-label", `Atbloķēt ${user.username}`);
+      actionButton.append(stamp);
       actionButton.addEventListener("click", () => updateBan(user));
     } else {
       actionButton.classList.add("admin-stamp-button");
       const stamp = document.createElement("img");
       stamp.className = "admin-ban-stamp";
-      stamp.src = "../images/banned-stamp-2-3.png";
+      stamp.src = toBanStamp;
       stamp.alt = "";
       actionButton.setAttribute("aria-label", `Bloķēt ${user.username}`);
       actionButton.append(stamp);
@@ -114,6 +144,65 @@ function renderUsers(users) {
     addCell(row, actions, "admin-user-actions-cell");
     userList.append(row);
   }
+  filterUsers();
+}
+
+function sortUsers(users) {
+  const direction = sortDirection.value === "asc" ? 1 : -1;
+
+  return [...users].sort((first, second) => {
+    let comparison;
+    switch (sortBy.value) {
+      case "lastLogin": {
+        const firstLogin = first.lastLoginAt ? new Date(first.lastLoginAt).getTime() : null;
+        const secondLogin = second.lastLoginAt ? new Date(second.lastLoginAt).getTime() : null;
+        if (firstLogin === null || secondLogin === null) {
+          if (firstLogin === secondLogin) return 0;
+          return firstLogin === null ? 1 : -1;
+        }
+        comparison = firstLogin - secondLogin;
+        break;
+      }
+      case "accountStatus":
+        comparison = Number(first.status !== "ACTIVE") - Number(second.status !== "ACTIVE");
+        break;
+      case "onlineStatus":
+        comparison = Number(Boolean(first.isOnline)) - Number(Boolean(second.isOnline));
+        break;
+      default:
+        comparison = first.username.localeCompare(second.username, "lv", { sensitivity: "base" });
+    }
+
+    return comparison * direction;
+  });
+}
+
+function filterUsers() {
+  const terms = userSearch.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+  const hasActiveFilters = accountFilter.value !== "all"
+    || onlineFilter.value !== "all"
+    || loginFilter.value !== "all";
+  let visibleCount = 0;
+
+  for (const row of userList.querySelectorAll("tr")) {
+    const matchesSearch = terms.every((term) => row.dataset.searchText.includes(term));
+    const matchesAccount = accountFilter.value === "all"
+      || row.dataset.accountStatus === accountFilter.value;
+    const matchesOnline = onlineFilter.value === "all"
+      || row.dataset.onlineStatus === onlineFilter.value;
+    const matchesLogin = loginFilter.value === "all"
+      || (loginFilter.value === "logged-in" && row.dataset.hasLogin === "true")
+      || (loginFilter.value === "never" && row.dataset.hasLogin === "false");
+    const matches = matchesSearch && matchesAccount && matchesOnline && matchesLogin;
+    row.hidden = !matches;
+    if (matches) visibleCount += 1;
+  }
+
+  status.textContent = terms.length || hasActiveFilters
+    ? `Atrasti lietotāji: ${visibleCount} no ${currentUsers.length}`
+    : currentUsers.length
+      ? `Lietotāju skaits: ${currentUsers.length}`
+      : "Lietotāju nav.";
 }
 
 async function updateBan(user, duration) {
@@ -172,6 +261,27 @@ randomBanButton.addEventListener("click", async () => {
     randomBanButton.disabled = false;
   }
 });
+
+userSearch.addEventListener("input", filterUsers);
+function toggleMenu(toggle, menu, otherToggle, otherMenu) {
+  const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+  toggle.setAttribute("aria-expanded", String(!isExpanded));
+  menu.hidden = isExpanded;
+  otherToggle.setAttribute("aria-expanded", "false");
+  otherMenu.hidden = true;
+}
+
+sortToggle.addEventListener("click", () => {
+  toggleMenu(sortToggle, sortMenu, filterToggle, filterMenu);
+});
+sortBy.addEventListener("change", () => renderUsers(currentUsers));
+sortDirection.addEventListener("change", () => renderUsers(currentUsers));
+filterToggle.addEventListener("click", () => {
+  toggleMenu(filterToggle, filterMenu, sortToggle, sortMenu);
+});
+accountFilter.addEventListener("change", filterUsers);
+onlineFilter.addEventListener("change", filterUsers);
+loginFilter.addEventListener("change", filterUsers);
 
 async function loadUsers() {
   if (loading) return;

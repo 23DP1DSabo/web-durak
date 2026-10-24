@@ -350,6 +350,80 @@ body {
     font-size: clamp(24px, 5vw, 34px);
 }
 
+.admin-user-search-label {
+    display: block;
+    margin: 14px 0 6px;
+    font-weight: 700;
+}
+
+.admin-user-tools {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.admin-users-dialog .admin-user-search {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: #49301f;
+    font: 16px Georgia, "Palatino Linotype", serif;
+}
+
+.admin-users-dialog .admin-user-search::placeholder {
+    color: #d1bea0;
+    opacity: 1;
+}
+
+.admin-user-sort {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.admin-users-dialog .admin-user-sort-toggle {
+    min-height: 42px;
+    padding: 8px 14px;
+}
+
+.admin-user-sort-menu {
+    position: absolute;
+    z-index: 2;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid;
+    min-width: 220px;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: #49301f;
+    box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
+}
+
+.admin-user-sort-menu[hidden] {
+    display: none;
+}
+
+.admin-user-sort-menu label {
+    font-weight: 700;
+}
+
+.admin-users-dialog .admin-user-sort-menu select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 38px;
+    padding: 6px 8px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: #49301f;
+    font: 14px Georgia, "Palatino Linotype", serif;
+}
+
 .admin-users-dialog .room-dialog-close {
     margin: 0;
 }
@@ -478,6 +552,12 @@ body {
     object-fit: contain;
 }
 
+.admin-user-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .admin-random-ban-wrap {
     display: flex;
     justify-content: flex-end;
@@ -485,6 +565,10 @@ body {
 }
 
 .admin-users-dialog .admin-random-ban {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     min-height: 48px;
     font-size: 18px;
 }
@@ -2181,6 +2265,29 @@ body[data-theme="light"] .admin-users-dialog button {
     background-image: none;
 }
 
+body[data-theme="light"] .admin-users-dialog .admin-user-search,
+body[data-theme="light"] .admin-users-dialog .admin-user-sort-menu,
+body[data-theme="light"] .admin-users-dialog .admin-user-sort-menu select,
+body[data-theme="light"] .admin-users-dialog .admin-user-actions select,
+body[data-theme="light"] .admin-users-dialog .admin-users-table th {
+    border-color: #c5d0bd;
+    color: #26352a;
+    background: #f5f7f0;
+}
+
+body[data-theme="light"] .admin-users-dialog .admin-user-search::placeholder {
+    color: #526653;
+}
+
+body[data-theme="light"] .admin-users-dialog button.admin-stamp-button,
+body[data-theme="light"] .admin-users-dialog button.admin-stamp-button:hover {
+    border: 0;
+    color: inherit;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+}
+
 body[data-theme="light"] .room-dialog .room-code {
     border-color: #c5d0bd;
     color: #26352a;
@@ -2371,6 +2478,29 @@ body[data-theme="dark"] .admin-users-dialog button {
     color: #e4e9e5;
     background: #35444b;
     background-image: none;
+}
+
+body[data-theme="dark"] .admin-users-dialog .admin-user-search,
+body[data-theme="dark"] .admin-users-dialog .admin-user-sort-menu,
+body[data-theme="dark"] .admin-users-dialog .admin-user-sort-menu select,
+body[data-theme="dark"] .admin-users-dialog .admin-user-actions select,
+body[data-theme="dark"] .admin-users-dialog .admin-users-table th {
+    border-color: #46525a;
+    color: #e4e9e5;
+    background: #182126;
+}
+
+body[data-theme="dark"] .admin-users-dialog .admin-user-search::placeholder {
+    color: #aab7af;
+}
+
+body[data-theme="dark"] .admin-users-dialog button.admin-stamp-button,
+body[data-theme="dark"] .admin-users-dialog button.admin-stamp-button:hover {
+    border: 0;
+    color: inherit;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
 }
 
 body[data-theme="dark"] .room-dialog .room-code {
