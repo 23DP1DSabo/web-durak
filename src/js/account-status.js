@@ -13,7 +13,7 @@ async function refreshAccount() {
     }
     if (!response.ok) return;
     const { user } = await response.json();
-    link.textContent = user.name || "Mans konts";
+    link.textContent = user.username || "Mans konts";
     friendsNavItem.hidden = false;
     adminNavItem.hidden = user.role !== "ADMIN";
   } catch {

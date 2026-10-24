@@ -256,6 +256,43 @@ export function createFriendsRouter(prisma, {
     }
   });
 
+  // DELETE /api/friends/:userId
+  router.delete("/:userId", async (req, res) => {
+    const currentUser = await getFriendRequestUser(req, res);
+    if (!currentUser) return;
+
+    const friendId = req.params.userId;
+    if (!validDatabaseId(friendId)) {
+      return res.status(400).json({ error: "Nederīgs spēlētāja ID." });
+    }
+
+    const targetId = BigInt(friendId);
+    if (targetId === currentUser.id) {
+      return res.status(400).json({ error: "Jūs nevarat noņemt sevi no draugiem." });
+    }
+
+    try {
+      const result = await prisma.friendship.deleteMany({
+        where: {
+          status: "ACCEPTED",
+          OR: [
+            { senderId: currentUser.id, recipientId: targetId },
+            { senderId: targetId, recipientId: currentUser.id },
+          ],
+        },
+      });
+
+      if (!result.count) {
+        return res.status(404).json({ error: "Draugs nav atrasts." });
+      }
+
+      return res.json({ message: "Draugs ir noņemts." });
+    } catch (error) {
+      console.error("Removing friend failed:", error);
+      return res.status(500).json({ error: "Neizdevās noņemt draugu." });
+    }
+  });
+
   // POST /api/friends/requests
   router.post("/requests", async (req, res) => {
     const currentUser = await getFriendRequestUser(req, res);

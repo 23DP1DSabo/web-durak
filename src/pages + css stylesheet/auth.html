@@ -3,12 +3,12 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Pieslēgties | DuraKlash</title>
+        <title>Konts | DuraKlash</title>
         <link rel="stylesheet" href="./main.css">
     </head>
     <body class="auth-page">
         <a class="auth-back-link" href="./index.html" aria-label="Atpakaļ uz sākumu">Atpakaļ</a>
-        <main id="auth-panel">
+        <main id="auth-panel" class="settings-panel">
             <header class="auth-header">
                 <h1>DuraKlash</h1>
             </header>
@@ -57,9 +57,52 @@
             </form>
 
             <section id="account" hidden>
-                <h2 id="account-name"></h2>
+                <h2 id="account-title"></h2>
+                <p id="account-name"></p>
                 <p id="account-email"></p>
-                <!-- <p><a href="./index.html">Doties uz spēli</a></p> -->
+                <div id="account-settings">
+                    <section class="settings-section" aria-labelledby="profile-settings-heading">
+                        <h3 id="profile-settings-heading">Profils</h3>
+                        <p>Pašreizējais lietotājvārds: <strong id="current-username"></strong></p>
+                        <form id="username-form">
+                            <div class="auth-field">
+                                <label for="new-username">Jauns lietotājvārds</label>
+                                <input id="new-username" name="username" autocomplete="username" required maxlength="50" pattern="[\p{L}\p{N}_]+" title="Burti, cipari un pasvītrojums">
+                            </div>
+                            <button type="submit">Nomainīt lietotājvārdu</button>
+                        </form>
+                    </section>
+                    <section class="settings-section" aria-labelledby="password-settings-heading">
+                        <h3 id="password-settings-heading">Parole</h3>
+                        <form id="password-form">
+                            <div class="auth-field">
+                                <label for="current-password">Pašreizējā parole</label>
+                                <input id="current-password" name="currentPassword" type="password" autocomplete="current-password" required maxlength="128">
+                            </div>
+                            <div class="auth-field">
+                                <label for="new-password">Jaunā parole</label>
+                                <input id="new-password" name="newPassword" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="new-password-help">
+                                <small id="new-password-help">Parolei jābūt no 8 līdz 128 rakstzīmēm.</small>
+                            </div>
+                            <div class="auth-field">
+                                <label for="confirm-password">Atkārtojiet jauno paroli</label>
+                                <input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" required minlength="8" maxlength="128">
+                            </div>
+                            <button type="submit">Nomainīt paroli</button>
+                        </form>
+                    </section>
+                    <section class="settings-section danger-zone" aria-labelledby="delete-account-heading">
+                        <h3 id="delete-account-heading">Dzēst kontu</h3>
+                        <p>Konts un draugu saites tiks dzēstas. Spēļu rezultāti tiks saglabāti anonimizētā veidā. Pirms dzēšanas izej no gaidošajām istabām un pabeidz aktīvās spēles.</p>
+                        <form id="delete-account-form">
+                            <div class="auth-field">
+                                <label for="delete-account-password">Pašreizējā parole</label>
+                                <input id="delete-account-password" name="currentPassword" type="password" autocomplete="current-password" required maxlength="128">
+                            </div>
+                            <button class="delete-account-button" type="submit">Neatgriezeniski dzēst kontu</button>
+                        </form>
+                    </section>
+                </div>
                 <button id="logout" type="button">Izrakstīties</button>
             </section>
             <p id="auth-message" role="status" aria-live="polite"></p>

@@ -311,6 +311,55 @@ export function createAuthApp(prisma) {
     }
   });
 
+  authApp.delete("/api/auth/account", async (req, res) => {
+    try {
+      const user = await getAuthenticatedUser(req, res);
+      if (!user) return;
+
+      const currentPassword = req.body?.currentPassword;
+      if (typeof currentPassword !== "string" || currentPassword.length > 128) {
+        return res.status(400).json({ error: "Ievadiet pašreizējo paroli." });
+      }
+      if (!(await verifyPassword(currentPassword, user.passwordHash))) {
+        return res.status(400).json({ error: "Pašreizējā parole nav pareiza." });
+      }
+
+      const deleted = await prisma.$transaction(async (db) => {
+        const activeMatch = await db.matchPlayer.findFirst({
+          where: {
+            userId: user.id,
+            match: { is: { status: { in: ["WAITING", "ACTIVE"] } } },
+          },
+          select: { id: true },
+        });
+        if (activeMatch) return false;
+
+        await db.friendship.deleteMany({
+          where: { OR: [{ senderId: user.id }, { recipientId: user.id }] },
+        });
+        await db.matchPlayer.updateMany({
+          where: { userId: user.id },
+          data: { userId: null, guestName: "Dzēsts lietotājs" },
+        });
+        await db.session.deleteMany({ where: { userId: user.id } });
+        await db.user.delete({ where: { id: user.id } });
+        return true;
+      });
+
+      if (!deleted) {
+        return res.status(409).json({
+          error: "Pirms konta dzēšanas izej no visām gaidošajām istabām un pabeidz aktīvās spēles.",
+        });
+      }
+
+      clearSessionCookie(res);
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Account deletion failed:", error);
+      return res.status(500).json({ error: "Neizdevās dzēst kontu." });
+    }
+  });
+
   authApp.patch("/api/auth/username", async (req, res) => {
     try {
       const user = await getAuthenticatedUser(req, res);

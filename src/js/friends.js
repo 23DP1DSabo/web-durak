@@ -49,15 +49,19 @@ function makeButton(label, action, id, className = "btn") {
     return button;
 }
 
-function addUserItem(list, user, buttons = []) {
+function addUserItem(list, user, buttons = [], className = "") {
     const item = document.createElement("li");
+    item.className = `friend-action-row ${className}`.trim();
     const name = document.createElement("span");
 
     name.textContent = user.username;
     item.append(name);
 
-    for (const button of buttons) {
-        item.append(" ", button);
+    if (buttons.length) {
+        const actions = document.createElement("div");
+        actions.className = "friend-row-actions";
+        actions.append(...buttons);
+        item.append(actions);
     }
 
     list.append(item);
@@ -111,6 +115,15 @@ async function sendRequest(userId) {
     pageMessage.textContent = "Draudzības uzaicinājums nosūtīts!";
 }
 
+async function removeFriend(friend) {
+    if (!confirm(`Vai tiešām noņemt "${friend.username}" no draugiem?`)) return;
+
+    await api(`/api/friends/${encodeURIComponent(friend.id)}`, {
+        method: "DELETE",
+    });
+    pageMessage.textContent = `${friend.username} noņemts no draugiem.`;
+}
+
 async function respondToRequest(requestId, decision) {
     await api(`/api/friends/requests/${encodeURIComponent(requestId)}`, {
         method: "PATCH",
@@ -131,7 +144,14 @@ async function loadFriends() {
         sentList.replaceChildren();
 
         for (const friend of data.friends || []) {
-            addUserItem(friendsList, friend);
+            const removeButton = makeButton(
+                "Noņemt",
+                () => removeFriend(friend),
+                friend.id,
+                "btn friend-remove-button",
+            );
+            removeButton.setAttribute("aria-label", `Noņemt ${friend.username} no draugiem`);
+            addUserItem(friendsList, friend, [removeButton], "friend-list-item");
         }
 
         for (const request of data.incoming || []) {

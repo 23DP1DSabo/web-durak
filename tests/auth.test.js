@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createAuthApp } from "../app.js";
 
-let server, base, db, users, sessions;
+let server, base, db, users, sessions, friendships, matchPlayers, activeMatchPlayers;
 beforeEach(async () => {
-  users = []; sessions = new Map();
+  users = []; sessions = new Map(); friendships = []; matchPlayers = []; activeMatchPlayers = [];
   db = {
     user: {
       create: async ({ data }) => {
@@ -21,6 +21,11 @@ beforeEach(async () => {
         }
         Object.assign(user, data);
         return user;
+      },
+      delete: async ({ where }) => {
+        const index = users.findIndex((user) => user.id === where.id);
+        if (index < 0) throw new Error("User not found");
+        return users.splice(index, 1)[0];
       },
       updateMany: async ({ where, data }) => {
         const matches = users.filter((user) =>
@@ -67,10 +72,37 @@ beforeEach(async () => {
         return { count: Number(sessions.delete(where.tokenHash)) };
       },
     },
+    friendship: {
+      deleteMany: async ({ where }) => {
+        const removed = friendships.filter((friendship) =>
+          where.OR.some((condition) =>
+            friendship.senderId === condition.senderId
+            || friendship.recipientId === condition.recipientId
+          )
+        );
+        friendships = friendships.filter((friendship) => !removed.includes(friendship));
+        return { count: removed.length };
+      },
+    },
+    matchPlayer: {
+      findFirst: async ({ where }) => activeMatchPlayers.find(
+        (player) => player.userId === where.userId
+      ) ?? null,
+      updateMany: async ({ where, data }) => {
+        const matches = matchPlayers.filter((player) => player.userId === where.userId);
+        for (const player of matches) Object.assign(player, data);
+        return { count: matches.length };
+      },
+    },
     $transaction: async (callback) => {
       const oldUsers = structuredClone(users), oldSessions = structuredClone(sessions);
+      const oldFriendships = structuredClone(friendships), oldMatchPlayers = structuredClone(matchPlayers);
       try { return await callback(db); }
-      catch (error) { users = oldUsers; sessions = oldSessions; throw error; }
+      catch (error) {
+        users = oldUsers; sessions = oldSessions;
+        friendships = oldFriendships; matchPlayers = oldMatchPlayers;
+        throw error;
+      }
     },
   };
   server = createAuthApp(db).listen(0, "127.0.0.1");
@@ -406,4 +438,52 @@ test("password change verifies the current password and accepts only a valid new
   expect((await change(credentials.password, "another strong password")).status).toBe(200);
   expect((await post("login", credentials)).status).toBe(401);
   expect((await post("login", { ...credentials, password: "another strong password" })).status).toBe(200);
+});
+
+test("account deletion verifies password, blocks active games, and anonymizes match history", async () => {
+  const unauthenticated = await fetch(`${base}/api/auth/account`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword: credentials.password }),
+  });
+  expect(unauthenticated.status).toBe(401);
+
+  const cookie = cookieOf(await post("register"));
+  const remove = (currentPassword) => fetch(`${base}/api/auth/account`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ currentPassword }),
+  });
+
+  expect((await remove("incorrect password")).status).toBe(400);
+  friendships = [
+    { senderId: 1n, recipientId: 2n },
+    { senderId: 3n, recipientId: 1n },
+    { senderId: 2n, recipientId: 3n },
+  ];
+  matchPlayers = [
+    { userId: 1n, guestName: null, result: "WIN" },
+    { userId: 2n, guestName: null, result: "DURAK" },
+  ];
+  activeMatchPlayers = [{ userId: 1n }];
+
+  const active = await remove(credentials.password);
+  expect(active.status).toBe(409);
+  expect(users).toHaveLength(1);
+  expect(sessions.size).toBe(1);
+  expect(friendships).toHaveLength(3);
+  expect(matchPlayers[0].userId).toBe(1n);
+
+  activeMatchPlayers = [];
+  const deleted = await remove(credentials.password);
+  expect(deleted.status).toBe(204);
+  expect(deleted.headers.get("set-cookie")).toContain("Max-Age=0");
+  expect(users).toHaveLength(0);
+  expect(sessions.size).toBe(0);
+  expect(friendships).toEqual([{ senderId: 2n, recipientId: 3n }]);
+  expect(matchPlayers).toEqual([
+    { userId: null, guestName: "Dzēsts lietotājs", result: "WIN" },
+    { userId: 2n, guestName: null, result: "DURAK" },
+  ]);
+  expect((await me(cookie)).status).toBe(401);
 });

@@ -3,12 +3,15 @@ const loginForm = document.querySelector("#login-form");
 const registerForm = document.querySelector("#register-form");
 const account = document.querySelector("#account");
 const message = document.querySelector("#auth-message");
+const usernameForm = document.querySelector("#username-form");
+const passwordForm = document.querySelector("#password-form");
+const deleteAccountForm = document.querySelector("#delete-account-form");
 let busy = false;
 
 function setBusy(value) {
   busy = value;
-  document.querySelectorAll("#auth-panel button").forEach((button) => {
-    button.disabled = value;
+  document.querySelectorAll("#auth-panel button, #auth-panel input").forEach((control) => {
+    control.disabled = value;
   });
   document
     .querySelector("#auth-panel")
@@ -66,8 +69,10 @@ function showAccount(user) {
   registerForm.hidden = true;
   document.querySelector(".auth-tabs").hidden = true;
   account.hidden = false;
-  document.querySelector("#account-name").textContent = user.name || "Konts";
+  document.querySelector("#account-title").textContent = user.username;
+  document.querySelector("#account-name").textContent = user.name || "";
   document.querySelector("#account-email").textContent = user.email;
+  document.querySelector("#current-username").textContent = user.username;
 }
 
 async function submitAuth(form, endpoint) {
@@ -150,6 +155,90 @@ document.querySelector("#logout").addEventListener("click", async () => {
     showMessage("Jūs esat izrakstījies.");
   } catch (error) {
     showMessage(error.message || "Neizdevās izrakstīties.");
+  } finally {
+    setBusy(false);
+  }
+});
+
+usernameForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (busy) return;
+
+  const username = new FormData(usernameForm).get("username");
+  setBusy(true);
+  showMessage("");
+  try {
+    const result = await request("/api/auth/username", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+      }),
+    });
+    document.querySelector("#current-username").textContent = result.user.username;
+    usernameForm.reset();
+    showMessage("Lietotājvārds veiksmīgi nomainīts.");
+  } catch (error) {
+    showMessage(error.message || "Neizdevās nomainīt lietotājvārdu.");
+  } finally {
+    setBusy(false);
+  }
+});
+
+passwordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (busy) return;
+
+  const values = Object.fromEntries(new FormData(passwordForm));
+  if (values.newPassword !== values.confirmPassword) {
+    showMessage("Jaunās paroles nesakrīt.");
+    return;
+  }
+
+  setBusy(true);
+  showMessage("");
+  try {
+    await request("/api/auth/password", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword,
+      }),
+    });
+    passwordForm.reset();
+    showMessage("Parole veiksmīgi nomainīta.");
+  } catch (error) {
+    showMessage(error.message || "Neizdevās nomainīt paroli.");
+  } finally {
+    setBusy(false);
+  }
+});
+
+deleteAccountForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (busy) return;
+
+  const currentPassword = new FormData(deleteAccountForm).get("currentPassword");
+  setBusy(true);
+  showMessage("");
+  try {
+    await request("/api/auth/account", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword,
+      }),
+    });
+    account.hidden = true;
+    document.querySelector(".auth-tabs").hidden = false;
+    loginForm.hidden = false;
+    document.querySelector("#show-login").setAttribute("aria-pressed", "true");
+    document.querySelector("#show-register").setAttribute("aria-pressed", "false");
+    deleteAccountForm.reset();
+    showMessage("Konts ir dzēsts.");
+  } catch (error) {
+    showMessage(error.message || "Neizdevās dzēst kontu.");
   } finally {
     setBusy(false);
   }

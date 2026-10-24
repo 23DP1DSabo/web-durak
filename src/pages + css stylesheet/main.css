@@ -1498,6 +1498,33 @@ body {
     padding-left: 0;
 }
 
+.placeholder-section .friend-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.friend-action-row > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.friend-row-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.auth-page button.friend-remove-button {
+    margin: 0;
+    padding: 7px 12px;
+}
+
 .room-setting-option {
     display: flex;
     align-items: center;
@@ -1944,6 +1971,33 @@ body.auth-page[data-theme="dark"] .room-setting-option input[type="checkbox"]:ch
     color: #e8d8ad;
     font-size: 13px;
     line-height: 1.45;
+}
+
+.danger-zone {
+    border-color: rgb(194 91 72 / 65%);
+}
+
+.danger-zone h3 {
+    color: #f0a18d;
+}
+
+.auth-page button.delete-account-button,
+body.auth-page[data-theme="light"] button.delete-account-button,
+body.auth-page[data-theme="dark"] button.delete-account-button {
+    border-color: #ff1a1a;
+    color: #fff;
+    background: #ff0000;
+    background-image: none;
+    box-shadow: 0 0 10px rgb(255 0 0 / 42%);
+    text-shadow: none;
+}
+
+.auth-page button.delete-account-button:hover,
+body.auth-page[data-theme="light"] button.delete-account-button:hover,
+body.auth-page[data-theme="dark"] button.delete-account-button:hover {
+    border-color: #ff4d4d;
+    background: #e00000;
+    filter: none;
 }
 
 .theme-options {
