@@ -177,6 +177,8 @@ export function advanceClock(g, now = Date.now()) {
   if (g.result) return false;
 
   const currentActor = actor(g);
+  if (!currentActor) return false;
+
   const p = player(g, currentActor);
 
   if (!p || p.out) return false;
