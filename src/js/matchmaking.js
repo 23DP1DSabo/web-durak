@@ -129,6 +129,73 @@ function createRoomCode() {
   ).join("");
 }
 
+
+function finish(g, loser, reason) {
+  g.result = {
+    loser,
+    winners: g.players
+      .filter((p) => p.id !== loser)
+      .map((p) => p.id),
+    reason,
+  };
+  g.phase = "finished";
+}
+
+function eliminate(g, id, reason) {
+  const p = player(g, id);
+
+  if (!p || p.out) return;
+
+  p.out = true;
+
+  // end game when there is one or less active players
+  const remaining = active(g);
+
+  if (remaining.length <= 1) {
+    finish(g, id, reason);
+    return;
+  }
+
+  // if the removed player was in an active phase
+  // clear the attack and continue with the other players
+  if (g.attacker === id || g.defender === id) {
+    g.discard.push(
+      ...g.attacks,
+      ...g.defenses.filter(Boolean),
+    );
+
+    g.attacks = [];
+    g.defenses = [];
+    g.limit = 0;
+    g.attacker = next(g, id);
+    g.defender = next(g, g.attacker);
+    g.phase = "attack";
+  }
+}
+
+export function advanceClock(g, now = Date.now()) {
+  if (g.result) return false;
+
+  const currentActor = actor(g);
+  const p = player(g, currentActor);
+
+  if (!p || p.out) return false;
+
+  p.remainingMs = Math.max(
+    0,
+    p.remainingMs - Math.max(0, now - g.updatedAt),
+  );
+
+  g.updatedAt = now;
+
+  if (p.remainingMs === 0) {
+    eliminate(g, p.id, "timeout");
+    return true;
+  }
+
+  return false;
+}
+
 document.querySelectorAll("[data-room-mode]").forEach((button) => {
   button.addEventListener("click", () => {
     selectedMode = button.dataset.roomMode;

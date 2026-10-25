@@ -257,18 +257,37 @@ $("#play-card").onclick = () =>
 $("#take-card").onclick = () => move("take");
 $("#pass-card").onclick = () => move("pass", selected);
 $("#finish-attack").onclick = () => move("finish");
+
+
 $("#return-to-room").onclick = async (event) => {
   event.preventDefault();
-  if (
-    !state ||
-    state.result ||
-    state.players.find((p) => p.id === state.selfId)?.out
-  )
-    return location.assign("./index.html");
-  if (!confirm("Pamest spēli un atzīt zaudējumu?")) return;
+
+  if (busy || !connected || !state) {
+    connection.textContent =
+      "Pagaidi, līdz atjaunojas savienojums ar serveri.";
+    return;
+  }
+
+  const self = state.players.find((p) => p.id === state.selfId);
+
+  if (state.result || self?.out) {
+    location.assign("./index.html");
+    return;
+  }
+
+  if (!confirm("Pamest spēli? Tu vairs nevarēsi turpināt šo partiju.")) {
+    return;
+  }
+
   await move("resign");
-  if (state?.result) location.assign("./index.html");
+
+  // navigate away only after the server confirms the move
+  if (state?.players.find((p) => p.id === state.selfId)?.out || state?.result) {
+    location.assign("./index.html");
+  }
 };
+
+
 socket.on("connect", join);
 socket.on("game:state", accept);
 socket.on("game:error", (message) => {
