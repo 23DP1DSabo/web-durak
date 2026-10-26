@@ -348,6 +348,25 @@ body {
     overflow-wrap: anywhere;
 }
 
+.room-code-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 8px;
+}
+
+.room-code-actions .room-code {
+    flex: 1 1 240px;
+    min-width: 0;
+    margin: 0;
+    user-select: all;
+}
+
+.room-code-actions button {
+    flex: 0 0 auto;
+}
+
 .room-description {
     color: var(--paper-light);
     font-size: 16px;
@@ -2123,3 +2142,26 @@ body[data-theme="dark"] .room-dialog .room-code {
   .multiplayer-opponents { gap: 5px; }
   .game-table-page:has(.multiplayer-opponents) .table-stage { min-height: 980px; }
 }
+
+/* Pointer-based card placement works with mouse, touch and pen. */
+.drag-table #player-hand { touch-action: none; user-select: none; }
+.drag-table .hand-card img { pointer-events: none; -webkit-user-drag: none; }
+.card-drag-ghost { position: fixed; z-index: 10000; width: 88px; pointer-events: none; transform: translate(-50%,-65%) rotate(-5deg); filter: drop-shadow(0 12px 12px #0009); }
+.card-drag-ghost img { width: 100%; border-radius: 6px; }
+.card-drag-ghost b { position: absolute; bottom: 0; left: 0; padding: 4px; border-radius: 5px; background: #f2ce79; color: #17251d; white-space: nowrap; }
+.drag-table .played-cards { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; width: 100%; }
+.card-drop-zone { width: 110px; min-height: 135px; padding: 10px; border: 2px dashed #eadba299; border-radius: 10px; color: #fff6db; background: #182e287d; font: inherit; font-size: .85rem; cursor: pointer; }
+.drag-table .played-card-pair[data-drop-kind] { cursor: pointer; border-radius: 8px; outline: 2px solid transparent; }
+.drag-table .drop-available { outline: 2px solid #ebc86a !important; }
+.drag-table .drop-hover { outline: 4px solid #9fe7af !important; background-color: #275c42; box-shadow: 0 0 22px #a3f1bc66; }
+.drag-table .played-card-pair:focus-visible, .card-drop-zone:focus-visible { outline: 3px solid #eaca6b; }
+@media (max-width:600px) {
+  .card-drop-zone { width: 75px; min-height: 105px; padding: 5px; font-size: .75rem; }
+  .drag-table .played-cards { gap: 8px; }
+}
+
+.game-table-page.drag-table:has(.multiplayer-opponents) .table-stage { min-height: calc(100svh - 80px); }
+.drag-table .player-seat { grid-template-columns: 1fr; gap: 4px; justify-items: center; }
+.drag-table .player-hand { flex-wrap: wrap; overflow: visible; justify-content: center; gap: 5px; }
+.drag-table .player-hand .hand-card + .hand-card { margin-left: 0; }
+.drag-table .player-hand .hand-card { touch-action: none; }

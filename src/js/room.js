@@ -17,11 +17,40 @@ const allowGuestsInput = document.querySelector("#allow-guests");
 const beginButton = document.querySelector("#begin-match");
 const statusElement = document.querySelector("#room-status");
 const roomCodeElement = document.querySelector("#room-code");
+const copyCodeButton = document.querySelector("#copy-room-code");
+const copyCodeStatus = document.querySelector("#copy-room-status");
 
 let room = null;
 let playerName = "Viesis";
 let busy = false;
 let redirected = false;
+let refreshing = false;
+let pendingSettings = {};
+let settingsRevision = 0;
+
+function hasPendingSettings() {
+  return Object.keys(pendingSettings).length > 0;
+}
+
+function renderSettings() {
+  const settings = { ...room, ...pendingSettings };
+  for (const input of timeLimitInputs) {
+    if (settings.timeLimitSeconds !== undefined) {
+      input.checked = Number(input.value) === settings.timeLimitSeconds;
+    }
+    input.disabled = !isHost || (room && room.status !== "waiting");
+  }
+  if (settings.timeLimitSeconds !== undefined) {
+    timeLimitStatus.textContent = `Katram spēlētājam: ${settings.timeLimitSeconds / 60} min`;
+  }
+  if (settings.allowGuests !== undefined) {
+    allowGuestsInput.checked = settings.allowGuests;
+  }
+  allowGuestsInput.disabled = !isHost || (room && room.status !== "waiting");
+  beginButton.hidden = !isHost;
+  beginButton.disabled = !isHost || !room || room.status !== "waiting" ||
+    room.players.length < 1 || busy || hasPendingSettings();
+}
 
 let playerId = localStorage.getItem("durak-player-id");
 if (!playerId) {
@@ -31,6 +60,37 @@ if (!playerId) {
 
 if (/^[A-Z0-9]{8}$/.test(roomCode)) {
   roomCodeElement.textContent = roomCode;
+  copyCodeButton.disabled = false;
+}
+
+async function copyRoomCode() {
+  const code = roomCodeElement.textContent.trim();
+  if (!/^[A-Z0-9]{8}$/.test(code)) return;
+  copyCodeButton.disabled = true;
+  copyCodeStatus.textContent = "";
+  try {
+    await navigator.clipboard.writeText(code);
+    copyCodeStatus.textContent = "Istabas kods nokopēts!";
+  } catch {
+    // Support local HTTP/LAN play where the Clipboard API may be unavailable.
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(roomCodeElement);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    let copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } catch {
+      // Leave the code selected so the player can copy it manually.
+    }
+    if (copied) selection.removeAllRanges();
+    copyCodeStatus.textContent = copied
+      ? "Istabas kods nokopēts!"
+      : "Neizdevās nokopēt automātiski. Nokopē atlasīto kodu manuāli.";
+  } finally {
+    copyCodeButton.disabled = false;
+  }
 }
 
 function setStatus(message) {
@@ -144,19 +204,7 @@ function renderRoom() {
     playerList.append(item);
   }
 
-  for (const input of timeLimitInputs) {
-    input.checked = Number(input.value) === room.timeLimitSeconds;
-    input.disabled = !isHost || room.status !== "waiting";
-  }
-
-  timeLimitStatus.textContent = `Katram spēlētājam: ${room.timeLimitSeconds / 60} min`;
-
-  allowGuestsInput.checked = room.allowGuests;
-  allowGuestsInput.disabled = !isHost || room.status !== "waiting";
-
-  beginButton.hidden = !isHost;
-  beginButton.disabled =
-    !isHost || room.status !== "waiting" || room.players.length < 1;
+  renderSettings();
 
   if (room.status === "waiting") {
     beginButton.textContent =
@@ -182,11 +230,14 @@ function renderRoom() {
 }
 
 async function refreshRoom() {
-  if (redirected || busy) return;
+  if (redirected || busy || refreshing) return;
+  refreshing = true;
 
   try {
     const data = await api(`/api/rooms/${encodeURIComponent(roomCode)}`);
 
+    // A poll started before a settings save must not undo its result.
+    if (redirected || busy || (room && data.room.version < room.version)) return;
     room = data.room;
 
     // If the host closed the room or the match was finished,
@@ -223,37 +274,53 @@ async function refreshRoom() {
     // A temporary server/network problem should not kick
     // everyone out of a room that may still exist.
     setStatus(error.message);
+  } finally {
+    refreshing = false;
   }
 }
 
-async function updateSettings() {
-  if (!isHost || !room || busy) return;
+function updateSettings(event) {
+  if (!isHost || (room && room.status !== "waiting")) return;
+  // Keep user intent even while creation or another save is in flight.
+  if (event.target === allowGuestsInput) {
+    pendingSettings.allowGuests = allowGuestsInput.checked;
+  } else {
+    pendingSettings.timeLimitSeconds = Number(event.target.value);
+  }
+  settingsRevision += 1;
+  renderSettings();
+  saveSettings();
+}
+
+async function saveSettings() {
+  if (!isHost || !room || busy || redirected || room.status !== "waiting" ||
+      !hasPendingSettings()) return;
 
   busy = true;
-
+  renderSettings();
+  setStatus("Saglabā istabas iestatījumus...");
   try {
-    const selected = document.querySelector('input[name="time-limit"]:checked');
-
-    const data = await api(
-      `/api/rooms/${encodeURIComponent(roomCode)}/settings`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          playerId,
-          timeLimitSeconds: Number(selected?.value ?? room.timeLimitSeconds),
-          allowGuests: allowGuestsInput.checked,
-        }),
-      },
-    );
-
-    room = data.room;
-    renderRoom();
+    // Serialize saves; a response to an earlier click cannot replace a later one.
+    while (hasPendingSettings()) {
+      const revision = settingsRevision;
+      const data = await api(
+        `/api/rooms/${encodeURIComponent(roomCode)}/settings`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ playerId, ...pendingSettings }),
+        },
+      );
+      room = data.room;
+      if (revision === settingsRevision) pendingSettings = {};
+      renderRoom();
+    }
     setStatus("Istabas iestatījumi saglabāti.");
   } catch (error) {
-    setStatus(error.message);
-    await refreshRoom();
+    pendingSettings = {};
+    setStatus(`Neizdevās saglabāt iestatījumus: ${error.message}`);
   } finally {
     busy = false;
+    renderSettings();
   }
 }
 
@@ -282,6 +349,8 @@ async function removePlayer(targetId, targetName) {
     setStatus(error.message);
   } finally {
     busy = false;
+    renderSettings();
+    saveSettings();
   }
 }
 
@@ -309,7 +378,7 @@ async function startGame() {
     roomCode,
   });
 
-  if (!isHost || !room || busy) {
+  if (!isHost || !room || busy || hasPendingSettings()) {
     console.warn("[Room] Start blocked by preconditions.");
     return;
   }
@@ -387,6 +456,7 @@ async function initializeRoom() {
     }
 
     renderRoom();
+    await saveSettings();
     refreshTimer = window.setInterval(refreshRoom, 2000);
   } catch (error) {
     console.error("Failed to initialize room:", error);
@@ -446,5 +516,7 @@ timeLimitInputs.forEach((input) => {
 
 allowGuestsInput.addEventListener("change", updateSettings);
 beginButton.addEventListener("click", startGame);
+copyCodeButton.addEventListener("click", copyRoomCode);
 
+renderSettings();
 initializeRoom();

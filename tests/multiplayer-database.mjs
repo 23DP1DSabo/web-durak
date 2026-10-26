@@ -115,6 +115,26 @@ try {
   assert.notEqual(sa.game.selfId, sb.game.selfId);
   assert.notDeepEqual(sa.game.hand, sb.game.hand);
   const current = sa.game.actor === sa.game.selfId ? sa : sb;
+  const peer = current === sa ? sb : sa;
+  const moveStarted = performance.now();
+  const peerUpdate = new Promise((resolve, reject) => {
+    const onState = (game) => {
+      if (game.version <= current.game.version) return;
+      clearTimeout(timer);
+      peer.socket.off("game:state", onState);
+      timings.push({
+        operation: "opponent update",
+        ms: Math.round(performance.now() - moveStarted),
+      });
+      resolve(game);
+    };
+    const timer = setTimeout(() => {
+      peer.socket.off("game:state", onState);
+      reject(new Error("Opponent update timed out"));
+    }, 15000);
+    peer.socket.on("game:state", onState);
+  });
+  peerUpdate.catch(() => {});
   const result = await timed("attack", () =>
     current.socket.timeout(15000).emitWithAck("game:move", {
       version: current.game.version,
@@ -123,6 +143,7 @@ try {
   );
   assert.ok(!result.error, result.error);
   assert.equal(result.game.attacks.length, 1);
+  assert.deepEqual((await peerUpdate).attacks, result.game.attacks);
   const duplicate = await current.socket
     .timeout(10000)
     .emitWithAck("game:move", {
@@ -130,9 +151,76 @@ try {
       move: { type: "attack", cardId: current.game.hand[0].id },
     });
   assert.ok(duplicate.error);
+  if (accounts.length) {
+    const account = accounts[current === sa ? 0 : 1];
+    const token = identities[current === sa ? 0 : 1].split("=")[1];
+    const tokenHash = createHash("sha256").update(token).digest("hex");
+    const sessionData = {
+      tokenHash,
+      userId: account.id,
+      expiresAt: new Date(Date.now() + 300000),
+    };
+    for (const change of ["ban", "expire", "revoke"]) {
+      if (change === "ban")
+        await prisma.user.update({
+          where: { id: account.id },
+          data: { status: "BANNED" },
+        });
+      if (change === "expire")
+        await prisma.session.update({
+          where: { tokenHash },
+          data: { expiresAt: new Date(0) },
+        });
+      if (change === "revoke")
+        await prisma.session.delete({ where: { tokenHash } });
+      try {
+        const blocked = await current.socket
+          .timeout(15000)
+          .emitWithAck("game:move", {
+            version: result.game.version,
+            move: { type: "resign" },
+          });
+        assert.equal(
+          blocked.status,
+          401,
+          `${change} must reject an already joined socket`,
+        );
+        const unchanged = await prisma.match.findUnique({
+          where: { id: createdId },
+        });
+        assert.equal(unchanged.version, result.game.version);
+        assert.equal(unchanged.status, "ACTIVE");
+      } finally {
+        if (change === "ban")
+          await prisma.user.update({
+            where: { id: account.id },
+            data: { status: "ACTIVE" },
+          });
+        if (change === "expire")
+          await prisma.session.update({
+            where: { tokenHash },
+            data: { expiresAt: sessionData.expiresAt },
+          });
+        if (change === "revoke")
+          await prisma.session.create({ data: sessionData });
+      }
+    }
+    console.log(
+      "PASS: banned, expired and revoked sessions cannot move over an existing socket or change persisted state.",
+    );
+  }
   sa.socket.disconnect();
   const reconnected = await connect(a.cookie);
   assert.deepEqual(reconnected.game.attacks, result.game.attacks);
+  let blockedPeerStates = 0;
+  const countPeerState = () => blockedPeerStates++;
+  if (accounts.length) {
+    await prisma.user.update({
+      where: { id: accounts[1].id },
+      data: { status: "BANNED" },
+    });
+    sb.socket.on("game:state", countPeerState);
+  }
   const finish = await reconnected.socket
     .timeout(10000)
     .emitWithAck("game:move", {
@@ -140,6 +228,19 @@ try {
       move: { type: "resign" },
     });
   assert.ok(!finish.error, finish.error);
+  if (accounts.length) {
+    // Invalid recipients are disconnected, and never receive the committed hand.
+    assert.equal(blockedPeerStates, 0);
+    assert.equal(sb.socket.connected, false);
+    sb.socket.off("game:state", countPeerState);
+    await prisma.user.update({
+      where: { id: accounts[1].id },
+      data: { status: "ACTIVE" },
+    });
+    console.log(
+      "PASS: a banned recipient receives no new state after another player's move.",
+    );
+  }
   const saved = await prisma.match.findUnique({
     where: { id: createdId },
     include: { players: true },

@@ -38,7 +38,11 @@
                     </header>
                     <h2 id="room-mode-name">Spēles istaba</h2>
                     <p class="room-description">Istabas kods</p>
-                    <p id="room-code" class="room-code" aria-live="polite"></p>
+                    <div class="room-code-actions">
+                        <p id="room-code" class="room-code" aria-live="polite"></p>
+                        <button id="copy-room-code" type="button" disabled>Kopēt kodu</button>
+                    </div>
+                    <p id="copy-room-status" class="room-setting-status" role="status" aria-live="polite"></p>
                     
                     <p id="room-status" role="status" aria-live="polite">
                         Ielādē istabu...

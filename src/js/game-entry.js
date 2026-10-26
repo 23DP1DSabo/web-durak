@@ -11,9 +11,23 @@ try {
     throw new Error(
       "Tu neesi šīs istabas dalībnieks. Pievienojies istabai sākumlapā.",
     );
-  if (data.room.multiplayer) await import("./multiplayer-table.js");
-  else if (data.room.status === "active") await import("./game-table.js");
-  else throw new Error("Spēle nav aktīva. Atgriezies sākumlapā.");
+  if (data.room.multiplayer)
+    (await import("./multiplayer-table.js")).startTable();
+  else if (data.room.status === "active") {
+    const { createSoloConnection } = await import("./solo-connection.js");
+    const connection = createSoloConnection(data.room, {
+      onFinish: async () => {
+        const response = await fetch(`/api/rooms/${code}/finish`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        if (!response.ok) throw new Error("Neizdevās saglabāt spēles beigas.");
+      },
+    });
+    (await import("./multiplayer-table.js")).startTable({ connection });
+  } else throw new Error("Spēle nav aktīva. Atgriezies sākumlapā.");
 } catch (error) {
   document.querySelector("#game-status").textContent = error.message;
   document.querySelector("#return-to-room").href = "./index.html";

@@ -89,14 +89,43 @@ kāršu piederību un noteikumus; pretinieku kārtis un kavas secība netiek nos
 Katrs pieņemtais gājiens tiek saglabāts MySQL ar atomāru versijas pārbaudi.
 Spēles pabeigšana un visu dalībnieku rezultāti tiek saglabāti vienā transakcijā.
 Lapas pārlāde vai īslaicīgs savienojuma zudums atjauno partiju. Laiks turpina ritēt arī
-bez savienojuma un servera pārstartēšanas laikā. Laika izbeigšanās vai padošanās
-noslēdz partiju: šis spēlētājs saņem DURAK, pārējie WIN. Neizšķirtā rezultāts paliek tukšs.
+bez savienojuma un servera pārstartēšanas laikā. Padošanās izslēdz tikai konkrēto
+spēlētāju un saglabā viņam DURAK; kamēr paliek vismaz divi aktīvi spēlētāji, partija
+turpinās. Viņa rokas kārtis nonāk atmetumos. Ja padodas aizsargs, arī galds nonāk
+atmetumos un sāk nākamais aktīvais spēlētājs; ja padodas uzbrucējs, iesākto uzbrukumu
+turpina aizsarga jaunais iepriekšējais kaimiņš. Laika izbeigšanās joprojām noslēdz
+partiju. Iepriekš padevušies spēlētāji gala rezultātos netiek pārrakstīti par WIN.
+Neizšķirtā bez padošanās rezultāts paliek tukšs.
 
-Gājieni notiek pa apli. Vienā izspēlē kārtis pievieno pašreizējais uzbrucējs;
-pārējie gaida savu kārtu. Padošanas režīmā uzbrukums pāriet nākamajam dalībniekam.
+Kārti velk no rokas uz galda brīvo vietu, bet aizsardzībai — uz konkrētas
+nenokautas uzbrukuma kārts. Vilkšanu var atcelt ar peles labo pogu vai Escape;
+kārts paliek rokā. Var nokaut kārtis jebkurā secībā. Vairākas kārtis var
+atlasīt ar klikšķi/pieskārienu un vilkt kopā; pirmā uzbrukuma kārtīm jābūt vienādas
+vērtības. Ar tastatūru var atlasīt kārti un aktivizēt galda mērķi ar Enter.
+
+Gājieni virzās sēdvietu secībā, izlaižot izstājušos. Piemest drīkst tikai aizsarga
+abi aktīvie kaimiņi: vispirms galvenais uzbrucējs pirms aizsarga, pēc viņa pogas
+**Beigt uzbrukumu** — spēlētājs pēc aizsarga. Pārējie šajā izspēlē nepiedalās.
+Piemest drīkst arī aizsardzības laikā — uz galda jau esošas vērtības,
+līdz sešām uzbrukuma kārtīm un ne vairāk par aizsarga kāršu skaitu izspēles sākumā.
+Padošanas režīmā tādas pašas vērtības kārti velk uz atsevišķo **Padot →** vietu
+blakus uzbrukumam, pirms sākta aizsardzība un ievērojot nākamā aizsarga ietilpību.
+
+**Paņemt kārtis** paziņo par paņemšanu, bet galdu uzreiz neiztukšo. Abi aizsarga
+kaimiņi tajā pašā secībā var pabeigt piemest; jau pabeigušajam apstiprinājums nav
+jāatkārto un viņš vairs nepiemet. Kad abi pabeiguši, aizsargs paņem galdu un izlaiž
+nākamo uzbrukumu. Ja viss nokauts un abi kaimiņi pabeiguši, uzbrūk iepriekšējais
+aizsargs. Padošanas režīmā pēc padošanas kaimiņus un secību nosaka jaunajam aizsargam.
+Arī spēle pret botu izmanto šos pašus noteikumus un kāršu vilkšanu; tās stāvoklis
+paliek konkrētā pārlūka cilnē. Multiplayer stāvokli joprojām saglabā serveris MySQL.
+
 Spēlētāji bez kārtīm pēc kavas iztukšošanās izstājas kā uzvarētāji; pēdējais ar kārtīm
-ir duraks. Japāņu režīmā saglabātas esošās mastu atšķirības. DuraKlash izvēle pagaidām
-izmanto klasiskos noteikumus; īpašās spējas vēl nav ieviestas.
+ir duraks. Japāņu režīmā saglabātas esošās mastu atšķirības. Jaunas istabas atļautas
+klasiskajā, padošanas un japāņu režīmā.
+
+Vadības paraugs: [R-Soft Durak Online noteikumi](https://static.rstgames.com/durak/public/en/help.html).
+Šeit pēc projekta prasības jau pirmajā izspēlē limits ir sešas uzbrukuma kārtis.
+Pēc šī atjauninājuma pārstartē API un pārlādē spēles lapas; DB migrācija nav vajadzīga.
 
 Spēļu serverim paredzēts viens Node process. Vairākām instancēm jāievieš kopīgs
 Socket.IO adapteris un slodzes sadales konfigurācija. `npm test` aptver pilnas 2, 3 un
@@ -113,7 +142,9 @@ DB savienojuma pārbaude: `http://localhost:3000/api/health/db`.
 
 Veiktspēja: serveris atkārtoti izmanto pēdējo saglabāto spēles stāvokli, un parastam
 viesa gājienam vajadzīgs viens nosacīts DB ieraksts. Gājienu apstiprina tikai pēc
-saglabāšanas; konta sesiju joprojām pārbauda DB. Saistītos datus Prisma ielādē kopā
+saglabāšanas; konta statusu un sesijas derīgumu pārbauda tajā pašā nosacītajā DB
+ierakstā. Pretinieku sesiju pārbaudes notiek paralēli saglabāšanai; rezultātu
+nosūta tikai pēc veiksmīga ieraksta un saņēmēja pārbaudes. Saistītos datus Prisma ielādē kopā
 (`relationJoins`), tāpēc pēc atjauninājuma jāpalaiž `npm run db:generate` un
 jāpārstartē API. Šim paātrinājumam papildu DB migrācija nav vajadzīga.
 Laika beigas apstrādā katras partijas taimeris; termiņus atjauno servera startā un
