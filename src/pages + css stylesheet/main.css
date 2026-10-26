@@ -1578,6 +1578,10 @@ body {
     outline-offset: 3px;
 }
 
+#restart-game[hidden] {
+    display: none !important;
+}
+
 #friend-search-form input {
     box-sizing: border-box;
     width: 65%;
