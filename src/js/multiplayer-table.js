@@ -43,12 +43,61 @@ export function startTable({ connection: localConnection = null } = {}) {
   document.body.classList.add("drag-table");
   $("#take-card").textContent = "Paņemt kārtis";
   $("#return-to-room").href = "./index.html";
-  $("#restart-game").textContent = "Atgriezties sākumlapā";
-  $("#restart-game").onclick = () => location.assign("./index.html");
+  const restartButton = $("#restart-game");
+  restartButton.textContent = "Turpināt nākamo kārtu";
   const connection = document.createElement("p");
   connection.className = "multiplayer-connection";
   connection.setAttribute("role", "status");
   $(".game-table-header").append(connection);
+
+  const resultActions = $(".game-result-actions");
+
+  const nextRoundStatus = document.createElement("p");
+  nextRoundStatus.className = "next-round-status";
+  nextRoundStatus.setAttribute("role", "status");
+  nextRoundStatus.hidden = true;
+
+  resultActions.prepend(nextRoundStatus);
+
+  restartButton.onclick = async () => {
+    if (!state?.result || busy || !connected) return;
+
+    const nextRound = state.nextRound;
+
+    if (!nextRound?.canVote) {
+      nextRoundStatus.textContent =
+        "Lai turpinātu multiplayer spēli, nepieciešami vismaz 2 spēlētāji.";
+      nextRoundStatus.hidden = false;
+      return;
+    }
+
+    busy = true;
+    render();
+
+    try {
+      const data = await socket.timeout(10000).emitWithAck(
+        "game:ready-next",
+        {
+          code,
+          version: state.version,
+        },
+      );
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      accept(data.game);
+    } catch (error) {
+      connection.textContent =
+        error.message || "Neizdevās pieteikties nākamajai kārtai.";
+
+      if (socket.connected) await join();
+    } finally {
+      busy = false;
+      render();
+    }
+  };
 
   const cardImage = (card) => {
     const image = document.createElement("img");
@@ -70,6 +119,16 @@ export function startTable({ connection: localConnection = null } = {}) {
     state = game;
     receivedAt = performance.now();
     selected = selected.filter((id) => state.hand.some((c) => c.id === id));
+
+    // closee the previous rounds result dialog, when a new round starts
+    if (!game.result) {
+      const dialog = $("#game-result-dialog");
+      if (dialog?.open) dialog.close();
+
+      nextRoundStatus.hidden = true;
+      restartButton.disabled = false;
+    }
+
     if (changed) render();
     else updateClocks();
   }
@@ -167,8 +226,13 @@ export function startTable({ connection: localConnection = null } = {}) {
       name.textContent = p.name;
       const detail = document.createElement("p");
       detail.textContent = p.out
-        ? p.exitReason === "resign" ? "Padevās"
-          : p.exitReason === "timeout" ? "Beidzās laiks" : "Izgājis"
+        ? p.exitReason === "resign"
+          ? "Padevās"
+          : p.exitReason === "timeout"
+            ? "Beidzās laiks"
+            : p.exitReason === "inactive"
+              ? "Neaktīvs · laiks beidzās"
+              : "Izgājis"
         : `${p.count} kārtis${p.id === state.attacker ? " · Uzbrūk" : p.id === state.defender ? " · Aizsargājas" : ""}`;
       const clock = document.createElement("time");
       clock.dataset.clock = p.id;
@@ -311,6 +375,35 @@ export function startTable({ connection: localConnection = null } = {}) {
       icon.src = lost ? loserIcon : winnerIcon;
       icon.alt = lost ? "Zaudējums" : "Uzvara";
       if (!$("#game-result-dialog").open) $("#game-result-dialog").showModal();
+
+      const nextRound = state.nextRound;
+
+      nextRoundStatus.hidden = false;
+
+      restartButton.disabled =
+        busy ||
+        !connected ||
+        !nextRound?.canContinue ||
+        !nextRound?.canVote;
+
+      if (!nextRound?.canContinue) {
+        nextRoundStatus.textContent =
+          "Nākamo kārtu nevar sākt — nepieciešami vismaz 2 spēlētāji.";
+      } else {
+        nextRoundStatus.textContent =
+          `${nextRound.readyCount} / ${nextRound.required} spēlētāji gatavi nākamajai kārtai.`;
+
+        restartButton.textContent = nextRound.selfReady
+          ? "Gatavs ✓ (atcelt)"
+          : "Turpināt nākamo kārtu";
+      }
+    } else {
+      nextRoundStatus.hidden = true;
+      restartButton.textContent = "Turpināt nākamo kārtu";
+      restartButton.disabled = false;
+
+      const dialog = $("#game-result-dialog");
+      if (dialog?.open) dialog.close();
     }
   }
   function resultMessage() {
@@ -318,6 +411,7 @@ export function startTable({ connection: localConnection = null } = {}) {
     const self = state.players.find((p) => p.id === state.selfId);
     if (self.exitReason === "resign") return "Tu padevies. Partija ir beigusies.";
     if (self.exitReason === "timeout") return "Tev beidzās laiks. Tu zaudēji.";
+    if (self.exitReason === "inactive") return "Laiks beidzās, neizpildot nevienu gājienu. Tika pieņemts, ka pameti spēli.";
     if (r.loser === null) return "Neizšķirts!";
     const loser = state.players.find((p) => p.id === r.loser)?.name;
     const reason =
