@@ -108,13 +108,16 @@ export function createRoomsRouter(
       where: {
         mode: req.body.mode,
         status: "WAITING",
-        createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) },
-        ...(!req.identity.user ? { allowGuests: true } : {}),
+        allowGuests: true,
+        createdAt: {
+          gte: new Date(Date.now() - 30 * 60 * 1000),
+        },
       },
       include: service.include,
       orderBy: { createdAt: "asc" },
       take: 100,
     });
+    
     const room = candidates.find(
       (r) =>
         r.players.length > 0 &&

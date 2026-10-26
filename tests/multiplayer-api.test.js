@@ -112,7 +112,10 @@ beforeEach(async () => {
   db = database();
   app = createAuthApp(db);
   server = createServer(app);
-  rt = attachRealtime(server, app.locals.matches, { tickMs: 60000 });
+  rt = attachRealtime(server, app.locals.matches, {
+    origin: "http://localhost:3000,http://192.168.1.105:3000",
+    tickMs: 60000,
+  });
   sockets = [];
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -167,6 +170,12 @@ async function connect(cookie, origin = "http://localhost:3000") {
 }
 const join = (s) =>
   s.timeout(3000).emitWithAck("game:join", { code: "TESTROOM" });
+
+test("Socket.IO accepts each configured browser origin", async () => {
+  const { a } = await setup();
+  const socket = await connect(a.cookie, "http://192.168.1.105:3000");
+  expect((await join(socket)).game.selfId).toBeTruthy();
+});
 
 test("two browsers receive shared moves, private hands and restored state after reconnect", async () => {
   const { a, b } = await setup();
@@ -587,4 +596,28 @@ test("server rejects early and non-neighbour throw-ins, including stale rebased 
   expect(room.gameState.attacks.map((c) => c.id)).toEqual(["a", "c"]);
   expect(room.gameState.finishedAttackers).toEqual([ids[0]]);
   await expect(service.action("TESTROOM", identities[3], { type: "finish", bout: 0 }, room.version)).rejects.toThrow();
+});
+
+
+test("a three-player timeout stays active and records the loss through final completion", async () => {
+  const members = await setupMany(3);
+  const service = app.locals.matches;
+  let room = await service.load("TESTROOM");
+  const state = structuredClone(room.gameState);
+  const expiredId = state.attacker;
+  state.updatedAt = Date.now() - 700000;
+  await db.match.update({ where: { id: room.id }, data: { gameState: state } });
+  await service.expire();
+  room = await service.load("TESTROOM");
+  expect(room.status).toBe("ACTIVE");
+  expect(room.gameState.result).toBeNull();
+  expect(room.gameState.players.find((p) => p.id === expiredId)).toMatchObject({ out: true, exitReason: "timeout" });
+  expect(room.players.find((p) => String(p.id) === expiredId).result).toBe("DURAK");
+  expect(room.players.filter((p) => String(p.id) !== expiredId).map((p) => p.result)).toEqual([null, null]);
+  const survivor = members.find((m) => m.body.room.selfId !== expiredId);
+  const who = await service.identity({ headers: { cookie: survivor.cookie } });
+  room = await service.action("TESTROOM", who, { type: "resign" }, room.version);
+  expect(room.status).toBe("FINISHED");
+  expect(room.gameState.result.losers).toContain(expiredId);
+  expect(room.players.map((p) => p.result).sort()).toEqual(["DURAK", "DURAK", "WIN"]);
 });

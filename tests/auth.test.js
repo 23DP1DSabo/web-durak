@@ -1,16 +1,18 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { createAuthApp } from "../app.js";
 
-let server, base, db, users, sessions;
+let server, base, db, users, sessions, friendships, matchPlayers, activeMatchPlayers;
 beforeEach(async () => {
-  users = []; sessions = new Map();
+  users = []; sessions = new Map(); friendships = []; matchPlayers = []; activeMatchPlayers = [];
   db = {
     user: {
       create: async ({ data }) => {
         if (users.some((u) => u.email === data.email || u.username === data.username)) throw { code: "P2002" };
         const user = { id: BigInt(users.length + 1), status: "ACTIVE", role: "USER", theme: "DARK", avatar: null, ...data }; users.push(user); return user;
       },
-      findUnique: async ({ where }) => users.find((u) => u.email === where.email),
+      findUnique: async ({ where }) => users.find((u) =>
+        where.id !== undefined ? u.id === where.id : u.email === where.email
+      ),
       update: async ({ where, data }) => {
         const user = users.find((candidate) => candidate.id === where.id);
         if (!user) throw new Error("User not found");
@@ -20,6 +22,35 @@ beforeEach(async () => {
         Object.assign(user, data);
         return user;
       },
+      delete: async ({ where }) => {
+        const index = users.findIndex((user) => user.id === where.id);
+        if (index < 0) throw new Error("User not found");
+        return users.splice(index, 1)[0];
+      },
+      updateMany: async ({ where, data }) => {
+        const matches = users.filter((user) =>
+          user.status === where.status && user.banExpiresAt && user.banExpiresAt <= where.banExpiresAt.lte
+        );
+        for (const user of matches) Object.assign(user, data);
+        return { count: matches.length };
+      },
+      findMany: async ({ orderBy, select }) => [...users]
+        .sort((a, b) => orderBy.username === "asc"
+          ? a.username.localeCompare(b.username)
+          : b.username.localeCompare(a.username))
+        .map((user) => ({
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          role: user.role,
+          status: user.status,
+          lastLoginAt: user.lastLoginAt,
+          banExpiresAt: user.banExpiresAt ?? null,
+          sessions: [...sessions.values()]
+            .filter((session) => session.userId === user.id && session.expiresAt > select.sessions.where.expiresAt.gt)
+            .slice(0, select.sessions.take)
+            .map(() => ({ tokenHash: "not-returned-to-client" })),
+        })),
     },
     session: {
       create: vi.fn(async ({ data }) => { sessions.set(data.tokenHash, data); return data; }),
@@ -27,12 +58,51 @@ beforeEach(async () => {
         const s = sessions.get(where.tokenHash);
         return s ? { ...s, user: users.find((u) => u.id === s.userId) } : null;
       },
-      deleteMany: async ({ where }) => { sessions.delete(where.tokenHash); return { count: 1 }; },
+      deleteMany: async ({ where }) => {
+        if (where.userId !== undefined) {
+          let count = 0;
+          for (const [tokenHash, session] of sessions) {
+            if (session.userId === where.userId) {
+              sessions.delete(tokenHash);
+              count++;
+            }
+          }
+          return { count };
+        }
+        return { count: Number(sessions.delete(where.tokenHash)) };
+      },
+    },
+    friendship: {
+      deleteMany: async ({ where }) => {
+        const removed = friendships.filter((friendship) =>
+          where.OR.some((condition) =>
+            friendship.senderId === condition.senderId
+            || friendship.recipientId === condition.recipientId
+          )
+        );
+        friendships = friendships.filter((friendship) => !removed.includes(friendship));
+        return { count: removed.length };
+      },
+    },
+    matchPlayer: {
+      findFirst: async ({ where }) => activeMatchPlayers.find(
+        (player) => player.userId === where.userId
+      ) ?? null,
+      updateMany: async ({ where, data }) => {
+        const matches = matchPlayers.filter((player) => player.userId === where.userId);
+        for (const player of matches) Object.assign(player, data);
+        return { count: matches.length };
+      },
     },
     $transaction: async (callback) => {
       const oldUsers = structuredClone(users), oldSessions = structuredClone(sessions);
+      const oldFriendships = structuredClone(friendships), oldMatchPlayers = structuredClone(matchPlayers);
       try { return await callback(db); }
-      catch (error) { users = oldUsers; sessions = oldSessions; throw error; }
+      catch (error) {
+        users = oldUsers; sessions = oldSessions;
+        friendships = oldFriendships; matchPlayers = oldMatchPlayers;
+        throw error;
+      }
     },
   };
   server = createAuthApp(db).listen(0, "127.0.0.1");
@@ -58,12 +128,14 @@ test("register, restore session, rotate on login, logout and reject revoked sess
   expect(registered.status).toBe(201);
   expect(await registered.json()).toEqual({ user: { id: "1", email: credentials.email, name: "Player", username: "player", avatar: null, theme: "DARK", role: "USER" } });
   expect(users[0].passwordHash).not.toContain(credentials.password);
+  expect(users[0].lastLoginAt).toBeInstanceOf(Date);
   const first = cookieOf(registered);
   expect(registered.headers.get("set-cookie")).toContain("HttpOnly; SameSite=Lax");
   expect(sessions.has(first.split("=")[1])).toBe(false);
   expect((await me(first)).status).toBe(200);
   const loggedIn = await post("login", credentials, first);
   expect(loggedIn.status).toBe(200);
+  expect(users[0].lastLoginAt).toBeInstanceOf(Date);
   const second = cookieOf(loggedIn);
   expect(second).not.toBe(first);
   expect((await me(first)).status).toBe(401);
@@ -102,7 +174,7 @@ test("registration rolls back when session storage fails", async () => {
   expect(users).toHaveLength(0);
 });
 test("blocks cross-origin requests and accepts configured origin", async () => {
-  vi.stubEnv("APP_ORIGIN", "http://localhost:3000");
+  vi.stubEnv("APP_ORIGIN", "http://localhost:3000, http://192.168.1.105:3000");
   expect((await post("register", credentials, null, { origin: "https://other.example" })).status).toBe(403);
   expect((await post("register", credentials, null, { "sec-fetch-site": "cross-site" })).status).toBe(403);
   expect((await fetch(`${base}/api/auth/theme`, {
@@ -111,6 +183,11 @@ test("blocks cross-origin requests and accepts configured origin", async () => {
     body: JSON.stringify({ theme: "LIGHT" }),
   })).status).toBe(403);
   expect((await post("register", credentials, null, { origin: "http://localhost:3000" })).status).toBe(201);
+  expect((await post("register", {
+    ...credentials,
+    email: "lan-player@example.com",
+    username: "lanplayer",
+  }, null, { origin: "http://192.168.1.105:3000" })).status).toBe(201);
 });
 test("limits repeated attempts and returns JSON for malformed requests", async () => {
   const invalid = await fetch(`${base}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{" });
@@ -141,9 +218,176 @@ test("username is required and unique, and registration cannot grant administrat
 test("banned accounts cannot sign in or reuse an existing session", async () => {
   const cookie = cookieOf(await post("register"));
   users[0].status = "BANNED";
-  expect((await post("login")).status).toBe(403);
+  const response = await post("login");
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({
+    error: "Šis konts ir bloķēts.",
+    banExpiresAt: null,
+  });
   expect((await me(cookie)).status).toBe(401);
   expect(sessions.size).toBe(0);
+});
+
+test("admin users endpoint is protected and returns presence and last login without secrets", async () => {
+  const regularCookie = cookieOf(await post("register", {
+    ...credentials,
+    email: "regular@example.com",
+    username: "regular",
+  }));
+  const anonymousResponse = await fetch(`${base}/api/admin/users`);
+  expect(anonymousResponse.status).toBe(401);
+
+  const regularResponse = await fetch(`${base}/api/admin/users`, {
+    headers: { cookie: regularCookie },
+  });
+  expect(regularResponse.status).toBe(403);
+
+  const adminCookie = cookieOf(await post("register", {
+    ...credentials,
+    email: "admin@example.com",
+    username: "admin",
+  }));
+  users.find((user) => user.username === "admin").role = "ADMIN";
+  users.find((user) => user.username === "admin").avatar = "https://example.test/avatar.png";
+  const expiredSession = [...sessions.entries()].find(([, session]) => session.userId === 1n);
+  expiredSession[1].expiresAt = new Date(0);
+
+  const response = await fetch(`${base}/api/admin/users`, {
+    headers: { cookie: adminCookie },
+  });
+  expect(response.status).toBe(200);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  const body = await response.json();
+  expect(body.users).toEqual([
+    {
+      id: "2",
+      username: "admin",
+      avatar: "https://example.test/avatar.png",
+      role: "ADMIN",
+      status: "ACTIVE",
+      lastLoginAt: expect.any(String),
+      banExpiresAt: null,
+      isOnline: true,
+    },
+    {
+      id: "1",
+      username: "regular",
+      avatar: null,
+      role: "USER",
+      status: "ACTIVE",
+      lastLoginAt: expect.any(String),
+      banExpiresAt: null,
+      isOnline: false,
+    },
+  ]);
+  expect(JSON.stringify(body)).not.toContain("passwordHash");
+  expect(JSON.stringify(body)).not.toContain("tokenHash");
+  expect(JSON.stringify(body)).not.toContain("epasts");
+});
+
+test("admin can apply temporary and permanent bans, revoke sessions, and unban users", async () => {
+  const adminCookie = cookieOf(await post("register", {
+    ...credentials,
+    email: "admin@example.com",
+    username: "admin",
+  }));
+  users[0].role = "ADMIN";
+  const userCookie = cookieOf(await post("register", {
+    ...credentials,
+    email: "target@example.com",
+    username: "target",
+  }));
+  const endpoint = (userId, action, body) => fetch(
+    `${base}/api/admin/users/${userId}/${action}`,
+    {
+      method: "POST",
+      headers: {
+        cookie: adminCookie,
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    },
+  );
+
+  const temporary = await endpoint("2", "ban", { duration: "10m" });
+  expect(temporary.status).toBe(200);
+  expect(users[1].status).toBe("BANNED");
+  expect(users[1].banExpiresAt.getTime()).toBeGreaterThan(Date.now());
+  expect([...sessions.values()].some((session) => session.userId === 2n)).toBe(false);
+  const loginResponse = await post("login", { ...credentials, email: "target@example.com" });
+  expect(loginResponse.status).toBe(403);
+  expect(await loginResponse.json()).toEqual({
+    error: "Šis konts ir bloķēts.",
+    banExpiresAt: users[1].banExpiresAt.toISOString(),
+  });
+  expect((await me(userCookie)).status).toBe(401);
+
+  const permanent = await endpoint("2", "ban", { duration: "permanent" });
+  expect(permanent.status).toBe(200);
+  expect(users[1].status).toBe("BANNED");
+  expect(users[1].banExpiresAt).toBeNull();
+  const permanentlyBannedLogin = await post("login", {
+    ...credentials,
+    email: "target@example.com",
+  });
+  expect(permanentlyBannedLogin.status).toBe(403);
+  expect(await permanentlyBannedLogin.json()).toEqual({
+    error: "Šis konts ir bloķēts.",
+    banExpiresAt: null,
+  });
+
+  expect((await endpoint("2", "unban")).status).toBe(200);
+  expect(users[1].status).toBe("ACTIVE");
+  expect(users[1].banExpiresAt).toBeNull();
+  expect((await post("login", { ...credentials, email: "target@example.com" })).status).toBe(200);
+});
+
+test("ban routes reject invalid durations, ordinary users, self-bans, and administrator targets", async () => {
+  const regularCookie = cookieOf(await post("register", {
+    ...credentials,
+    email: "regular@example.com",
+    username: "regular",
+  }));
+  const regularBan = await fetch(`${base}/api/admin/users/1/ban`, {
+    method: "POST",
+    headers: { cookie: regularCookie, "Content-Type": "application/json" },
+    body: JSON.stringify({ duration: "10m" }),
+  });
+  expect(regularBan.status).toBe(403);
+
+  const adminCookie = cookieOf(await post("register", {
+    ...credentials,
+    email: "admin@example.com",
+    username: "admin",
+  }));
+  users[1].role = "ADMIN";
+  await post("register", {
+    ...credentials,
+    email: "another-admin@example.com",
+    username: "anotheradmin",
+  });
+  users[2].role = "ADMIN";
+  const ban = (userId, duration) => fetch(`${base}/api/admin/users/${userId}/ban`, {
+    method: "POST",
+    headers: { cookie: adminCookie, "Content-Type": "application/json" },
+    body: JSON.stringify({ duration }),
+  });
+  expect((await ban("2", "10m")).status).toBe(400);
+  expect((await ban("3", "10m")).status).toBe(400);
+  expect((await ban("1", "unknown")).status).toBe(400);
+  expect((await ban("not-an-id", "10m")).status).toBe(400);
+  expect(users.every((user) => user.status === "ACTIVE")).toBe(true);
+});
+
+test("expired temporary ban is cleared and permits a fresh login", async () => {
+  await post("register");
+  users[0].status = "BANNED";
+  users[0].banExpiresAt = new Date(Date.now() - 1000);
+
+  const response = await post("login");
+  expect(response.status).toBe(200);
+  expect(users[0].status).toBe("ACTIVE");
+  expect(users[0].banExpiresAt).toBeNull();
 });
 
 test("account settings require authentication and update username and theme", async () => {
@@ -194,4 +438,52 @@ test("password change verifies the current password and accepts only a valid new
   expect((await change(credentials.password, "another strong password")).status).toBe(200);
   expect((await post("login", credentials)).status).toBe(401);
   expect((await post("login", { ...credentials, password: "another strong password" })).status).toBe(200);
+});
+
+test("account deletion verifies password, blocks active games, and anonymizes match history", async () => {
+  const unauthenticated = await fetch(`${base}/api/auth/account`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword: credentials.password }),
+  });
+  expect(unauthenticated.status).toBe(401);
+
+  const cookie = cookieOf(await post("register"));
+  const remove = (currentPassword) => fetch(`${base}/api/auth/account`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", cookie },
+    body: JSON.stringify({ currentPassword }),
+  });
+
+  expect((await remove("incorrect password")).status).toBe(400);
+  friendships = [
+    { senderId: 1n, recipientId: 2n },
+    { senderId: 3n, recipientId: 1n },
+    { senderId: 2n, recipientId: 3n },
+  ];
+  matchPlayers = [
+    { userId: 1n, guestName: null, result: "WIN" },
+    { userId: 2n, guestName: null, result: "DURAK" },
+  ];
+  activeMatchPlayers = [{ userId: 1n }];
+
+  const active = await remove(credentials.password);
+  expect(active.status).toBe(409);
+  expect(users).toHaveLength(1);
+  expect(sessions.size).toBe(1);
+  expect(friendships).toHaveLength(3);
+  expect(matchPlayers[0].userId).toBe(1n);
+
+  activeMatchPlayers = [];
+  const deleted = await remove(credentials.password);
+  expect(deleted.status).toBe(204);
+  expect(deleted.headers.get("set-cookie")).toContain("Max-Age=0");
+  expect(users).toHaveLength(0);
+  expect(sessions.size).toBe(0);
+  expect(friendships).toEqual([{ senderId: 2n, recipientId: 3n }]);
+  expect(matchPlayers).toEqual([
+    { userId: null, guestName: "Dzēsts lietotājs", result: "WIN" },
+    { userId: 2n, guestName: null, result: "DURAK" },
+  ]);
+  expect((await me(cookie)).status).toBe(401);
 });

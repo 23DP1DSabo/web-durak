@@ -251,7 +251,10 @@ test("restored taking state keeps confirmations and times the remaining attacker
   const restored = JSON.parse(JSON.stringify(g));
   expect(actor(restored)).toBe("3");
   expect(advanceClock(restored, 600001)).toBe(true);
-  expect(restored.result.loser).toBe("3");
+  expect(restored.result).toBeNull();
+  expect(restored.players[2]).toMatchObject({ out: true, exitReason: "timeout", remainingMs: 0 });
+  expect(restored.phase).toBe("attack");
+  expect(actor(restored)).toBe("1");
 });
 
 
@@ -382,4 +385,38 @@ test("a resigned defender's table is discarded and the next active seat attacks"
   expect(g.attacker).toBe("3");
   expect(g.defender).toBe("1");
   expect(g.players[0].hand).toHaveLength(6);
+});
+
+
+test.each(["attack", "defend", "taking"])("timeout during %s removes only that player and conserves cards", (phase) => {
+  let g = createMultiplayer(seats(4), "classic", 600, 0, rng());
+  g.attacker = "1";
+  g.defender = "2";
+  if (phase !== "attack") g = play(g, "1", { type: "attack", cardId: g.players[0].hand[0].id });
+  if (phase === "taking") g = play(g, "2", { type: "take" });
+  const expired = actor(g);
+  expect(advanceClock(g, 600001)).toBe(true);
+  expect(g.result).toBeNull();
+  expect(g.players.find((p) => p.id === expired)).toMatchObject({ out: true, exitReason: "timeout", hand: [], remainingMs: 0 });
+  expect(g.players.filter((p) => !p.out).every((p) => p.remainingMs === 600000)).toBe(true);
+  expect(cards(g)).toHaveLength(36);
+  expect(new Set(cards(g).map((c) => c.id)).size).toBe(36);
+  expect(actor(g)).not.toBe(expired);
+  expect(advanceClock(g, 600001)).toBe(false);
+  for (let i = 0; !g.result && i < 10000; i++) g = automatedMove(g);
+  expect(g.result).not.toBeNull();
+  expect(g.result.losers).toContain(expired);
+  expect(g.result.winners).not.toContain(expired);
+});
+
+test("resignation charges elapsed time once before changing the active clock", () => {
+  let g = createMultiplayer(seats(3), "classic", 600, 0, rng());
+  g.attacker = "1";
+  g.defender = "2";
+  g = applyMove(g, "3", { type: "resign" }, 10000);
+  expect(g.players[0].remainingMs).toBe(590000);
+  expect(g.players[1].remainingMs).toBe(600000);
+  expect(g.updatedAt).toBe(10000);
+  expect(advanceClock(g, 11000)).toBe(false);
+  expect(g.players[0].remainingMs).toBe(589000);
 });

@@ -16,11 +16,13 @@ publiskais dalībnieka ID nenodrošina piekļuvi viņa kārtīm vai darbībām.
 
 Laiks glabājas milisekundēs kopā ar servera atjauninājuma laiku. Aktīvā spēlētāja
 atlikušais laiks tiek aprēķināts arī pēc atvienošanās un servera pārstartēšanas.
-Padošanās atzīmē spēlētāju JSON ar `out: true`, `exitReason: "resign"` un vienā
+Padošanās vai laika beigas atzīmē spēlētāju JSON ar `out: true` un
+`exitReason: "resign"` vai `"timeout"`, kā arī vienā
 transakcijā saglabā viņa DURAK. Partija paliek ACTIVE, kamēr aktīvi vismaz divi
 spēlētāji. Gala `result.losers` satur gan iepriekš padevušos, gan pēdējo zaudētāju;
-viņiem visiem paliek DURAK. `result.loser` saglabāts savietojamībai. Laika beigas
-joprojām noslēdz visu partiju. Šīm izmaiņām nav vajadzīga DB migrācija.
+viņiem visiem paliek DURAK. `result.loser` saglabāts savietojamībai. Partija pēc
+laika beigām turpinās, ja paliek vismaz divi aktīvi spēlētāji. Šīm spēles noteikumu
+izmaiņām nav vajadzīga DB migrācija.
 
 Palaist: `npm run db:generate`, `npm run db:migrate`, pārstartēt serveri.
 Pārbaudīt: `npm test`, `npm run test:multiplayer:db`. Pēdējais tests izveido un

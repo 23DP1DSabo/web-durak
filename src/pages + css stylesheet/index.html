@@ -34,8 +34,9 @@
             <nav id="side-navigation-menu">
                 <li><a id="account-link" href="./auth.html">Pieslēgties</a></li>
                 <li id="friends-nav-item" hidden><a href="./friends.html">Draugi</a></li>
+                <li id="admin-nav-item" hidden><button id="admin-users-open" type="button">Administrēšana</button></li>
                 <li><a href="./rules.html">Noteikumi</a></li>
-                <li><a href="./settings.html">Iestatījumi</a></li>
+                <li><a href="./settings.html">Tēmas</a></li>
             </nav>
         </div>
         <dialog id="room-choice-dialog" class="room-dialog" aria-labelledby="room-dialog-title">
@@ -56,8 +57,111 @@
                 </div>
             </form>
         </dialog>
+        <dialog id="admin-users-dialog" class="admin-users-dialog" aria-labelledby="admin-users-title">
+            <div class="admin-users-header">
+                <h2 id="admin-users-title">Lietotāji</h2>
+                <button id="admin-users-close" class="room-dialog-close" type="button">Aizvērt</button>
+            </div>
+            <div class="admin-random-ban-wrap">
+                <button id="admin-random-ban" class="admin-random-ban" type="button">
+                    <span>Random</span>
+                    <img class="admin-ban-stamp" src="../images/to_ban.png" alt="">
+                </button>
+            </div>
+            <p id="admin-users-status" role="status" aria-live="polite"></p>
+            <label class="admin-user-search-label" for="admin-user-search">Meklēt lietotājus</label>
+            <div class="admin-user-tools">
+                <input
+                    id="admin-user-search"
+                    class="admin-user-search"
+                    type="search"
+                    placeholder="Meklēt pēc lietotājvārda un citiem atslēgvārdiem"
+                    autocomplete="off"
+                >
+                <div class="admin-user-sort">
+                    <button
+                        id="admin-user-filter-toggle"
+                        class="admin-user-sort-toggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="admin-user-filter-menu"
+                    >Filtrēt</button>
+                    <div
+                        id="admin-user-filter-menu"
+                        class="admin-user-sort-menu"
+                        role="group"
+                        aria-label="Lietotāju filtri"
+                        hidden
+                    >
+                        <label for="admin-user-filter-account">Konta statuss</label>
+                        <select id="admin-user-filter-account">
+                            <option value="all">Visi</option>
+                            <option value="active">Aktīvs</option>
+                            <option value="banned">Bloķēts</option>
+                        </select>
+                        <label for="admin-user-filter-online">Tiešsaistes statuss</label>
+                        <select id="admin-user-filter-online">
+                            <option value="all">Visi</option>
+                            <option value="online">Tiešsaistē</option>
+                            <option value="offline">Bezsaistē</option>
+                        </select>
+                        <label for="admin-user-filter-login">Pēdējā pieslēgšanās</label>
+                        <select id="admin-user-filter-login">
+                            <option value="all">Visi</option>
+                            <option value="logged-in">Ir pieslēdzies</option>
+                            <option value="never">Nav pieslēdzies</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-user-sort">
+                    <button
+                        id="admin-user-sort-toggle"
+                        class="admin-user-sort-toggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="admin-user-sort-menu"
+                    >Kārtot</button>
+                    <div
+                        id="admin-user-sort-menu"
+                        class="admin-user-sort-menu"
+                        role="group"
+                        aria-label="Kārtošanas iestatījumi"
+                        hidden
+                    >
+                        <label for="admin-user-sort-by">Kārtot pēc</label>
+                        <select id="admin-user-sort-by">
+                            <option value="username">Lietotājvārds</option>
+                            <option value="lastLogin">Pēdējā pieslēgšanās</option>
+                            <option value="accountStatus">Konta statuss</option>
+                            <option value="onlineStatus">Tiešsaistes statuss</option>
+                        </select>
+                        <label for="admin-user-sort-direction">Secība</label>
+                        <select id="admin-user-sort-direction">
+                            <option value="asc">Augošā</option>
+                            <option value="desc">Dilstošā</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="admin-users-table-wrap">
+                <table class="admin-users-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Avatar</th>
+                            <th scope="col">Lietotājvārds</th>
+                            <th scope="col">Tiešsaistes statuss</th>
+                            <th scope="col">Konta statuss</th>
+                            <th scope="col">Pēdējā pieslēgšanās</th>
+                            <th scope="col">Administrēšana</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users-list"></tbody>
+                </table>
+            </div>
+        </dialog>
         <script type="module" src="../js/matchmaking.js"></script>
         <script type="module" src="../js/account-status.js"></script>
+        <script type="module" src="../js/admin-panel.js"></script>
         <script type="module" src="../js/theme.js"></script>
     </body>
 </html>

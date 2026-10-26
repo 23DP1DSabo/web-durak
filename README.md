@@ -7,7 +7,7 @@
 
 Autentifikācija izmanto serverī glabātas 7 dienu sesijas un HttpOnly sīkdatni. Reģistrācija automātiski pieslēdz lietotāju; izrakstīšanās anulē pašreizējo sesiju. Viesu spēles ir pieejamas arī bez konta.
 
-Iestatījumu lapā pieslēdzies lietotājs var nomainīt lietotājvārdu, paroli un tēmu. Paroles maiņai jāievada pašreizējā parole un jaunā parole divreiz.
+Konta lapā pieslēdzies lietotājs var nomainīt lietotājvārdu un paroli, kā arī dzēst savu kontu, ievadot pašreizējo paroli. Dzēšot kontu, draudzības saites un sesijas tiek noņemtas, bet spēļu rezultāti tiek saglabāti anonimizēti; vispirms jāiziet no gaidošām istabām un jāpabeidz aktīvās spēles. Tēmu izvēle atrodas atsevišķā lapā “Tēmas”, kur pieejama klasiskā, gaišā un tumšā tēma.
 
 Pārbaudes: `npm test` un `npm run build`. API testi izmanto atmiņas datubāzes aizvietotāju; reālai MySQL pārbaudei nepieciešams konfigurēts `.env` un palaistas migrācijas.
 
@@ -30,28 +30,27 @@ Visi šajā datubāzē redz kopīgus lietotāju datus. Migrācijas jākoordinē 
 - Anna Laima Orbidāne (izstrādātāja, backend, frontend).
 
 # Projekta apraksts
-DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts sastāv no 5 lapām: sākumlapa, pieslēgšanās/reģistrācijas lapa, profila/konta lapa, spēles galds un iestatījumi. Ir iespēja spēlēt gan ar anonīmiem lietotājiem, gan ar draugiem. 
+DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projektā ir 7 lapas: sākumlapa, pieslēgšanās/reģistrācijas lapa, draugu lapa, spēles gaidīšanas istaba, spēles galds, noteikumu lapa un iestatījumu lapa. Ir iespēja spēlēt gan ar anonīmiem lietotājiem, gan ar draugiem.
 
 # Lietotāju lomas 
 - viesis;
-- administrators;
-- reģistrēts lietotājs.
+- reģistrēts lietotājs;
+- administrators.
 
 # Izmantotās ārējās tehnoloģijas
 - VScode;
 - GitHub;
 - Trello;
 - Agile + Scrum.
+- Railway
 
 # Izmantotās iekšējās tehnoloģijas
-- React + Vite – Frontend būvēšanas rīki, kas tika izvēlēti to ātruma, vienkāršuma un stabilitātes dēļ;
-- Typescript - uz JS būvēta programmēšanas valoda, kas šķietami atvieglo spēles loģikas noteikšanu un programmas uzturēšanu ilgtermiņā;
+- Vite – Frontend būvēšanas rīks, kas tika izvēlēts tā ātruma, vienkāršuma un stabilitātes dēļ;
 - MySQL datubāze - datubāze nepieciešamo datu glabāšanai, kuras veids izvēlēts pēc iepriekšējās pieredzes;
 - node.js - Standarta ietvars mājaslapu izveidei, kas pilnībā atbalsta Typescript, izvēlēts, tāpēc ka tā vienkāršums šķiet atbilstošs projekta mērogam;
 - Axios - bibliotēka paredzēta HTTP pieprasījumu sūtīšanai, gluži kā “fetch” komanda bet ar papildus ērtību funkcionalitāti;
 - Socket.IO - bibliotēka, kas iespējo lietotāja reāllaika divpusējo saziņu ar serveri. Nepieciešama reāllaika spēlei;
 - Prisma ORM - rīks, paredzēts darbam ar node.js un typescript, lai intuitīvi rakstīt datubāzes are OOP API nevis SQL rindām, potenciāli novēršot vairākas bieži pieļaujamās kļūdas ar sintaksi; 
-- Railway hosting – pakalpojums projekta pārnešanai uz ārējo serveri, kas izvēlēts pēc iesācējiem draudzīgas reputācijas; 
 - Zod – Typescript bibliotēka paredzēta datu validācijai un integritātes uzturēšanai;
 - Vitest – programmas testēšanas rīks.
 # Izmantotās ārējās tehnoloģijas
@@ -59,7 +58,6 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projekts 
 - VScode - kodēšanas vide;
 - Trello - kanban metodes darba plānotājs.
 
-Datubāzes struktūra ir pielāgota DuraKlash.docx ER modelim: lietotāji, draudzības, spēles un spēļu dalībnieki, kā arī tehniskā sesiju tabula. Lauki, saites, migrācijas un pārbaudes aprakstītas [prisma/DATABASE.md](prisma/DATABASE.md). Pēc šo izmaiņu saņemšanas palaid `npm run db:generate`, `npm run db:migrate` un pārstartē `npm run server`. Reģistrācijā tagad jānorāda arī unikāls lietotājvārds.
 
 ## Multiplayer (2–6 spēlētāji)
 
@@ -77,12 +75,13 @@ Pārbaude vienā datorā: izmanto divus dažādus pārlūkus vai parasto un priv
 Viena pārlūka parastās cilnes koplieto konta/viesa identitāti un nav divi spēlētāji.
 Viesu identitāte tagad ir HttpOnly sīkdatnē; vecajām viesu istabām jāizveido jauna istaba.
 
+
 Visiem spēlētājiem jāpieslēdzas **vienam lietotnes serverim**. Kopīga Railway DB pati
 par sevi nav publicēta spēles vietne. Vietējā tīklā vienā datorā palaiž abus serverus,
-`.env` iestata `APP_ORIGIN=http://<datora-LAN-IP>:3000`, pārstartē serveri un visi,
-arī saimnieks, atver šo adresi. Ugunsmūrī jābūt atļautam portam 3000 privātajam tīklam.
+pārstartē API serveri un spēlētāji, tostarp saimnieks, atver atbilstošo atļauto adresi.
+Ugunsmūrī jābūt atļautam portam 3000 privātajam tīklam.
 Ārpus vietējā tīkla jāpublicē lietotne ar WebSocket atbalstu un jāiestata tās HTTPS
-adrese kā `APP_ORIGIN`. DB piekļuves datus pārlūkā neievada.
+adrese kā viena no `APP_ORIGIN` vērtībām. DB piekļuves datus pārlūkā neievada.
 
 Multiplayer izmanto Socket.IO. Serveris izdala kārtis, pārbauda gājiena kārtību,
 kāršu piederību un noteikumus; pretinieku kārtis un kavas secība netiek nosūtīta klientam.
@@ -93,8 +92,8 @@ bez savienojuma un servera pārstartēšanas laikā. Padošanās izslēdz tikai 
 spēlētāju un saglabā viņam DURAK; kamēr paliek vismaz divi aktīvi spēlētāji, partija
 turpinās. Viņa rokas kārtis nonāk atmetumos. Ja padodas aizsargs, arī galds nonāk
 atmetumos un sāk nākamais aktīvais spēlētājs; ja padodas uzbrucējs, iesākto uzbrukumu
-turpina aizsarga jaunais iepriekšējais kaimiņš. Laika izbeigšanās joprojām noslēdz
-partiju. Iepriekš padevušies spēlētāji gala rezultātos netiek pārrakstīti par WIN.
+turpina aizsarga jaunais iepriekšējais kaimiņš. Arī laika izbeigšanās izslēdz tikai
+konkrēto spēlētāju. Iepriekš izslēgtie spēlētāji gala rezultātos netiek pārrakstīti par WIN.
 Neizšķirtā bez padošanās rezultāts paliek tukšs.
 
 Kārti velk no rokas uz galda brīvo vietu, bet aizsardzībai — uz konkrētas
@@ -125,7 +124,9 @@ klasiskajā, padošanas un japāņu režīmā.
 
 Vadības paraugs: [R-Soft Durak Online noteikumi](https://static.rstgames.com/durak/public/en/help.html).
 Šeit pēc projekta prasības jau pirmajā izspēlē limits ir sešas uzbrukuma kārtis.
-Pēc šī atjauninājuma pārstartē API un pārlādē spēles lapas; DB migrācija nav vajadzīga.
+Pēc atjaunināšanas izpildi `npm run db:generate` un `npm run db:migrate`, pārstartē API
+un pārlādē spēles lapas. Jaunās migrācijas pievieno pēdējās pieslēgšanās laiku un
+konta bloķēšanas termiņu; spēles noteikumu izmaiņas izmanto esošo JSON lauku.
 
 Spēļu serverim paredzēts viens Node process. Vairākām instancēm jāievieš kopīgs
 Socket.IO adapteris un slodzes sadales konfigurācija. `npm test` aptver pilnas 2, 3 un

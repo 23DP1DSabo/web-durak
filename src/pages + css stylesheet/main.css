@@ -168,7 +168,8 @@ body {
 }
 
 .game-button:focus-visible,
-#side-navigation-menu a:focus-visible {
+#side-navigation-menu a:focus-visible,
+#side-navigation-menu button:focus-visible {
     outline: 3px solid #e2bd70;
     outline-offset: 3px;
 }
@@ -204,17 +205,26 @@ body {
     margin-top: auto;
 }
 
-#side-navigation-menu a {
+#side-navigation-menu a,
+#side-navigation-menu button {
+    box-sizing: border-box;
     display: block;
+    width: 100%;
     padding: clamp(14px, 1.2vw, 28px) clamp(12px, 1vw, 24px);
+    border: 0;
     border-left: 3px solid transparent;
     color: inherit;
+    background: transparent;
     font-size: clamp(17px, 1.1vw, 26px);
+    font-family: inherit;
+    text-align: left;
     text-decoration: none;
+    cursor: pointer;
     transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
 }
 
-#side-navigation-menu a:hover {
+#side-navigation-menu a:hover,
+#side-navigation-menu button:hover {
     border-left-color: var(--brass);
     color: #f6e8c4;
     background: rgb(20 11 6 / 25%);
@@ -282,7 +292,8 @@ body {
     gap: 10px;
 }
 
-.room-dialog button {
+.room-dialog button,
+.admin-users-dialog button {
     min-height: 48px;
     padding: 11px 15px;
     border: 1px solid #b49762;
@@ -296,14 +307,275 @@ body {
     cursor: pointer;
 }
 
-.room-dialog button:hover {
+.room-dialog button:hover,
+.admin-users-dialog button:hover {
     filter: brightness(1.12);
 }
 
 .room-dialog button:focus-visible,
-.room-dialog input:focus-visible {
+.room-dialog input:focus-visible,
+.admin-users-dialog button:focus-visible {
     outline: 3px solid #e2bd70;
     outline-offset: 3px;
+}
+
+.admin-users-dialog {
+    box-sizing: border-box;
+    width: min(100% - 32px, 980px);
+    max-height: min(85vh, 760px);
+    padding: clamp(18px, 3vw, 32px);
+    border: 3px solid #2b190f;
+    outline: 1px solid var(--wood-light);
+    outline-offset: -8px;
+    color: var(--paper-light);
+    background: linear-gradient(rgb(74 43 25 / 88%), rgb(74 43 25 / 88%)), url("../images/broww-wood.jpg") center / cover;
+    box-shadow: 8px 10px 0 rgb(8 20 14 / 42%), inset 0 0 24px rgb(20 10 5 / 38%);
+    font-family: Georgia, "Palatino Linotype", serif;
+}
+
+.admin-users-dialog::backdrop {
+    background: rgb(5 18 12 / 78%);
+    backdrop-filter: blur(3px);
+}
+
+.admin-users-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.admin-users-header h2 {
+    margin: 0;
+    font-size: clamp(24px, 5vw, 34px);
+}
+
+.admin-user-search-label {
+    display: block;
+    margin: 14px 0 6px;
+    font-weight: 700;
+}
+
+.admin-user-tools {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.admin-users-dialog .admin-user-search {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: #49301f;
+    font: 16px Georgia, "Palatino Linotype", serif;
+}
+
+.admin-users-dialog .admin-user-search::placeholder {
+    color: #d1bea0;
+    opacity: 1;
+}
+
+.admin-user-sort {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.admin-users-dialog .admin-user-sort-toggle {
+    min-height: 42px;
+    padding: 8px 14px;
+}
+
+.admin-user-sort-menu {
+    position: absolute;
+    z-index: 2;
+    top: calc(100% + 6px);
+    right: 0;
+    display: grid;
+    min-width: 220px;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: #49301f;
+    box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
+}
+
+.admin-user-sort-menu[hidden] {
+    display: none;
+}
+
+.admin-user-sort-menu label {
+    font-weight: 700;
+}
+
+.admin-users-dialog .admin-user-sort-menu select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 38px;
+    padding: 6px 8px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: #49301f;
+    font: 14px Georgia, "Palatino Linotype", serif;
+}
+
+.admin-users-dialog .room-dialog-close {
+    margin: 0;
+}
+
+.admin-users-table-wrap {
+    max-height: 62vh;
+    overflow: auto;
+}
+
+.admin-users-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+    padding: 10px;
+    border-bottom: 1px solid rgb(232 216 173 / 35%);
+}
+
+.admin-users-table th {
+    position: sticky;
+    top: 0;
+    background: #49301f;
+}
+
+.admin-user-avatar {
+    display: grid;
+    width: 38px;
+    aspect-ratio: 1;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #b49762;
+    border-radius: 50%;
+    color: #fff0cf;
+    background: #315d3a;
+    font-weight: 700;
+}
+
+.admin-user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.admin-user-online,
+.admin-user-offline {
+    white-space: nowrap;
+}
+
+.admin-user-online::before,
+.admin-user-offline::before {
+    display: inline-block;
+    width: 8px;
+    aspect-ratio: 1;
+    margin-right: 7px;
+    border-radius: 50%;
+    content: "";
+}
+
+.admin-user-online::before {
+    background: #82c879;
+}
+
+.admin-user-offline::before {
+    background: #a4a4a4;
+}
+
+.admin-user-last-login {
+    white-space: nowrap;
+}
+
+.admin-user-actions-cell {
+    min-width: 220px;
+}
+
+.admin-user-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-users-dialog .admin-user-actions select {
+    min-width: 122px;
+    min-height: 38px;
+    padding: 6px 8px;
+    border: 1px solid #b49762;
+    color: #fff0cf;
+    background: #49301f;
+    font: 14px Georgia, "Palatino Linotype", serif;
+}
+
+.admin-users-dialog .admin-user-actions button {
+    min-height: 38px;
+    padding: 7px 10px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.admin-users-dialog .admin-stamp-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 4px 8px;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+}
+
+.admin-users-dialog .admin-stamp-button:hover {
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+    filter: brightness(1.12);
+}
+
+.admin-ban-stamp {
+    display: block;
+    width: 42px;
+    height: 36px;
+    object-fit: contain;
+}
+
+.admin-user-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-random-ban-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin: 12px 0;
+}
+
+.admin-users-dialog .admin-random-ban {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    font-size: 18px;
+}
+
+.admin-users-dialog .admin-user-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
 }
 
 #join-room-form {
@@ -1329,6 +1601,33 @@ body {
     padding-left: 0;
 }
 
+.placeholder-section .friend-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.friend-action-row > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.friend-row-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.auth-page button.friend-remove-button {
+    margin: 0;
+    padding: 7px 12px;
+}
+
 .room-setting-option {
     display: flex;
     align-items: center;
@@ -1454,54 +1753,42 @@ body.auth-page[data-theme="dark"] .room-setting-option input[type="checkbox"]:ch
    ========================================= */
 
 .remove-player-button {
-    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    gap: 7px;
+    width: 32px;
+    min-height: 32px;
+    margin: 0;
+    padding: 0;
 
-    min-height: 36px;
-    margin-left: auto;
-    padding: 7px 12px;
+    border: 0;
+    border-radius: 50%;
 
-    border: 1px solid #a8794e;
-    border-left: 3px solid #873e2b;
-    border-radius: 0;
+    color: #e4a18a;
+    background: transparent;
 
-    color: #ffe4d0;
-    /* background: */
-        /* linear-gradient(rgb(54 17 10 / 35%), rgb(54 17 10 / 35%)), */
-        /* url("../images/juicy-red-wood.jpg") center / cover; */
-
-    box-shadow: 2px 2px 0 rgb(25 14 7 / 40%);
-    font: 700 14px/1.2 Georgia, "Palatino Linotype", serif;
+    font: 700 14px/1 Georgia, "Palatino Linotype", serif;
     text-shadow: 1px 1px 2px #241207;
 
     cursor: pointer;
     transition:
-        transform 140ms ease,
-        border-color 140ms ease,
-        filter 140ms ease,
-        box-shadow 140ms ease;
+        color 140ms ease,
+        transform 140ms ease;
 }
 
 .remove-player-button::before {
-    content: "✕";
-    color: #e4a18a;
-    font-size: 12px;
+    content: "×";
+    font-size: 20px;
 }
 
 .remove-player-button:hover {
-    border-color: #e2bd7c;
-    filter: brightness(1.2);
-    box-shadow: 2px 3px 0 rgb(25 14 7 / 45%);
+    color: #f1d99c;
     transform: translateY(-1px);
 }
 
 .remove-player-button:active {
     transform: translateY(1px);
-    box-shadow: 0 1px 0 rgb(25 14 7 / 40%);
 }
 
 .remove-player-button:focus-visible {
@@ -1509,9 +1796,31 @@ body.auth-page[data-theme="dark"] .room-setting-option input[type="checkbox"]:ch
     outline-offset: 3px;
 }
 
+.auth-page button.remove-player-button {
+    min-height: 32px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: #e4a18a;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+    text-shadow: 1px 1px 2px #241207;
+}
+
+.auth-page button.remove-player-button:hover {
+    color: #f1d99c;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+    filter: none;
+    transform: translateY(-1px);
+}
+
 /* Keep player rows usable on narrow screens. */
 .player-list-item {
     gap: 10px;
+    grid-template-columns: 10px minmax(0, 1fr) auto auto;
 }
 
 .player-list-item > span:nth-child(2) {
@@ -1679,9 +1988,10 @@ body.auth-page[data-theme="dark"] .room-setting-option input[type="checkbox"]:ch
     }
 
     .remove-player-button {
-        min-height: 34px;
-        padding: 6px 8px;
-        font-size: 12px;
+        width: 28px;
+        min-height: 28px;
+        padding: 0;
+        font-size: 14px;
     }
 }
 
@@ -1764,6 +2074,33 @@ body.auth-page[data-theme="dark"] .room-setting-option input[type="checkbox"]:ch
     color: #e8d8ad;
     font-size: 13px;
     line-height: 1.45;
+}
+
+.danger-zone {
+    border-color: rgb(194 91 72 / 65%);
+}
+
+.danger-zone h3 {
+    color: #f0a18d;
+}
+
+.auth-page button.delete-account-button,
+body.auth-page[data-theme="light"] button.delete-account-button,
+body.auth-page[data-theme="dark"] button.delete-account-button {
+    border-color: #ff1a1a;
+    color: #fff;
+    background: #ff0000;
+    background-image: none;
+    box-shadow: 0 0 10px rgb(255 0 0 / 42%);
+    text-shadow: none;
+}
+
+.auth-page button.delete-account-button:hover,
+body.auth-page[data-theme="light"] button.delete-account-button:hover,
+body.auth-page[data-theme="dark"] button.delete-account-button:hover {
+    border-color: #ff4d4d;
+    background: #e00000;
+    filter: none;
 }
 
 .theme-options {
@@ -1931,11 +2268,43 @@ body[data-theme="light"] .room-dialog {
     background: #fffdf7;
 }
 
-body[data-theme="light"] .room-dialog button {
+body[data-theme="light"] .room-dialog button,
+body[data-theme="light"] .admin-users-dialog {
+    border-color: #8a9d81;
+    outline-color: #c1ceb8;
+    color: #26352a;
+    background: #fffdf7;
+}
+
+body[data-theme="light"] .room-dialog button,
+body[data-theme="light"] .admin-users-dialog button {
     border-color: #728b71;
     color: #fff;
     background: #456b4e;
     background-image: none;
+}
+
+body[data-theme="light"] .admin-users-dialog .admin-user-search,
+body[data-theme="light"] .admin-users-dialog .admin-user-sort-menu,
+body[data-theme="light"] .admin-users-dialog .admin-user-sort-menu select,
+body[data-theme="light"] .admin-users-dialog .admin-user-actions select,
+body[data-theme="light"] .admin-users-dialog .admin-users-table th {
+    border-color: #c5d0bd;
+    color: #26352a;
+    background: #f5f7f0;
+}
+
+body[data-theme="light"] .admin-users-dialog .admin-user-search::placeholder {
+    color: #526653;
+}
+
+body[data-theme="light"] .admin-users-dialog button.admin-stamp-button,
+body[data-theme="light"] .admin-users-dialog button.admin-stamp-button:hover {
+    border: 0;
+    color: inherit;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
 }
 
 body[data-theme="light"] .room-dialog .room-code {
@@ -2114,11 +2483,43 @@ body[data-theme="dark"] .room-dialog {
     background: #20282e;
 }
 
-body[data-theme="dark"] .room-dialog button {
+body[data-theme="dark"] .room-dialog button,
+body[data-theme="dark"] .admin-users-dialog {
+    border-color: #46525a;
+    outline-color: #303a40;
+    color: #e4e9e5;
+    background: #20282e;
+}
+
+body[data-theme="dark"] .room-dialog button,
+body[data-theme="dark"] .admin-users-dialog button {
     border-color: #56636a;
     color: #e4e9e5;
     background: #35444b;
     background-image: none;
+}
+
+body[data-theme="dark"] .admin-users-dialog .admin-user-search,
+body[data-theme="dark"] .admin-users-dialog .admin-user-sort-menu,
+body[data-theme="dark"] .admin-users-dialog .admin-user-sort-menu select,
+body[data-theme="dark"] .admin-users-dialog .admin-user-actions select,
+body[data-theme="dark"] .admin-users-dialog .admin-users-table th {
+    border-color: #46525a;
+    color: #e4e9e5;
+    background: #182126;
+}
+
+body[data-theme="dark"] .admin-users-dialog .admin-user-search::placeholder {
+    color: #aab7af;
+}
+
+body[data-theme="dark"] .admin-users-dialog button.admin-stamp-button,
+body[data-theme="dark"] .admin-users-dialog button.admin-stamp-button:hover {
+    border: 0;
+    color: inherit;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
 }
 
 body[data-theme="dark"] .room-dialog .room-code {

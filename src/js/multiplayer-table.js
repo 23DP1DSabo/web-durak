@@ -142,7 +142,9 @@ export function startTable({ connection: localConnection = null } = {}) {
       : self.out
         ? self.exitReason === "resign"
           ? "Tu padevies. Pārējie turpina spēli."
-          : "Tu esi izgājis. Gaidi partijas beigas."
+          : self.exitReason === "timeout"
+            ? "Tev beidzās laiks. Pārējie turpina spēli."
+            : "Tu esi izgājis. Gaidi partijas beigas."
         : state.phase === "taking"
           ? state.selfId === state.defender
             ? "Tu ņemsi kārtis. Gaidi, kamēr pārējie pabeidz piemest."
@@ -165,7 +167,8 @@ export function startTable({ connection: localConnection = null } = {}) {
       name.textContent = p.name;
       const detail = document.createElement("p");
       detail.textContent = p.out
-        ? p.exitReason === "resign" ? "Padevās" : "Izgājis"
+        ? p.exitReason === "resign" ? "Padevās"
+          : p.exitReason === "timeout" ? "Beidzās laiks" : "Izgājis"
         : `${p.count} kārtis${p.id === state.attacker ? " · Uzbrūk" : p.id === state.defender ? " · Aizsargājas" : ""}`;
       const clock = document.createElement("time");
       clock.dataset.clock = p.id;
@@ -314,6 +317,7 @@ export function startTable({ connection: localConnection = null } = {}) {
     const r = state.result;
     const self = state.players.find((p) => p.id === state.selfId);
     if (self.exitReason === "resign") return "Tu padevies. Partija ir beigusies.";
+    if (self.exitReason === "timeout") return "Tev beidzās laiks. Tu zaudēji.";
     if (r.loser === null) return "Neizšķirts!";
     const loser = state.players.find((p) => p.id === r.loser)?.name;
     const reason =
@@ -364,8 +368,11 @@ export function startTable({ connection: localConnection = null } = {}) {
   $("#finish-attack").onclick = () => move("finish");
   $("#return-to-room").onclick = async (event) => {
     event.preventDefault();
+    if (busy || !connected || !state) {
+      connection.textContent = "Pagaidi, līdz atjaunojas savienojums ar serveri.";
+      return;
+    }
     if (
-      !state ||
       state.result ||
       state.players.find((p) => p.id === state.selfId)?.out
     )
