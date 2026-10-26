@@ -44,7 +44,7 @@ export function startTable({ connection: localConnection = null } = {}) {
   $("#take-card").textContent = "Paņemt kārtis";
   $("#return-to-room").href = "./index.html";
   const restartButton = $("#restart-game");
-  restartButton.textContent = "Turpināt nākamo kārtu";
+  // restartButton.textContent = "Turpināt nākamo kārtu";
   const connection = document.createElement("p");
   connection.className = "multiplayer-connection";
   connection.setAttribute("role", "status");
@@ -60,7 +60,15 @@ export function startTable({ connection: localConnection = null } = {}) {
   resultActions.prepend(nextRoundStatus);
 
   restartButton.onclick = async () => {
-    if (!state?.result || busy || !connected) return;
+    if (
+      !state?.result ||
+      busy ||
+      !connected ||
+      !state.nextRound?.canContinue ||
+      !state.nextRound?.canVote
+    ) {
+      return;
+    }
 
     const nextRound = state.nextRound;
 
@@ -378,18 +386,17 @@ export function startTable({ connection: localConnection = null } = {}) {
 
       const nextRound = state.nextRound;
 
-      nextRoundStatus.hidden = false;
+      const canShowRestart =
+        Boolean(nextRound?.canVote && nextRound?.canContinue) &&
+        connected &&
+        !busy;
 
-      restartButton.disabled =
-        busy ||
-        !connected ||
-        !nextRound?.canContinue ||
-        !nextRound?.canVote;
+      restartButton.hidden = !canShowRestart;
+      restartButton.disabled = !canShowRestart;
 
-      if (!nextRound?.canContinue) {
-        nextRoundStatus.textContent =
-          "Nākamo kārtu nevar sākt — nepieciešami vismaz 2 spēlētāji.";
-      } else {
+      nextRoundStatus.hidden = !canShowRestart;
+
+      if (canShowRestart) {
         nextRoundStatus.textContent =
           `${nextRound.readyCount} / ${nextRound.required} spēlētāji gatavi nākamajai kārtai.`;
 
@@ -399,8 +406,9 @@ export function startTable({ connection: localConnection = null } = {}) {
       }
     } else {
       nextRoundStatus.hidden = true;
+      restartButton.hidden = true;
+      restartButton.disabled = true;
       restartButton.textContent = "Turpināt nākamo kārtu";
-      restartButton.disabled = false;
 
       const dialog = $("#game-result-dialog");
       if (dialog?.open) dialog.close();
