@@ -1,0 +1,1 @@
+ALTER TABLE `Lietotaji` ADD COLUMN `temas_versija` INTEGER NOT NULL DEFAULT 0;

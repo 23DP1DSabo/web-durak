@@ -1,3 +1,5 @@
+import { renderAvatar } from "./avatar.js";
+import { queueRoomExit } from "./room-exit.js";
 import { io } from "socket.io-client";
 import { attachCardDrag, dropMove } from "./card-drag.js";
 import { sortHand } from "./game-logic.js";
@@ -128,8 +130,20 @@ export function startTable({ connection: localConnection = null } = {}) {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   };
   let rejoinTimer = null;
+  let returningToLobby = false;
   function accept(game) {
     if (state && game.version < state.version) return;
+    if (game.nextRound?.lobbyCode && !localConnection) {
+      if (returningToLobby) return;
+      returningToLobby = true;
+      clearTimeout(rejoinTimer);
+      const url = new URL("./room.html", location.href);
+      url.searchParams.set("code", game.nextRound.lobbyCode);
+      url.searchParams.set("mode", game.mode);
+      url.searchParams.set("role", "player");
+      location.replace(url);
+      return;
+    }
     clearTimeout(rejoinTimer);
     connected = true;
     markConnected();
@@ -212,7 +226,7 @@ export function startTable({ connection: localConnection = null } = {}) {
     const self = state.players.find((p) => p.id === state.selfId);
     $("#match-mode").textContent = modeNames[state.mode] || state.mode;
     $("#match-player-name").textContent = self.name;
-    $(".player-avatar").textContent = self.name.charAt(0).toUpperCase();
+    renderAvatar($(".player-avatar"), self);
     $("#player-clock").hidden = !state.timed;
     $("#opponent-clock").hidden = !state.timed;
     if (!state.timed) {
@@ -238,7 +252,7 @@ export function startTable({ connection: localConnection = null } = {}) {
               : "Pretinieka gājiens"
           : state.selfId === state.defender && state.attacks.length
             ? "Aizsargājies"
-            : state.selfId === state.actor
+            : state.legal.attack.length || state.legal.finish
               ? "Tavs gājiens"
               : "Pretinieka gājiens";
     opponents.replaceChildren();
@@ -269,7 +283,12 @@ export function startTable({ connection: localConnection = null } = {}) {
         back.setAttribute("aria-hidden", "true");
         cards.append(back);
       }
-      seat.append(name, detail, clock, cards);
+      const identity = document.createElement("div");
+      identity.className = "multiplayer-identity";
+      const avatar = document.createElement("span");
+      renderAvatar(avatar, p);
+      identity.append(avatar, name);
+      seat.append(identity, detail, clock, cards);
       opponents.append(seat);
     }
     const hand = $("#player-hand");
@@ -387,10 +406,9 @@ export function startTable({ connection: localConnection = null } = {}) {
     $("#finish-attack").hidden = !state.legal.finish;
     $("#finish-attack").disabled = busy || !connected || !state.legal.finish;
     $("#finish-attack").textContent =
-      state.selfId === state.attacker && state.attackers?.length > 1
-        ? "Beigt uzbrukumu"
-        : state.phase === "taking" || state.phase === "defend"
-          ? "Beigt piemest" : "Kauts · beigt izspēli";
+      state.selfId === state.attacker && state.attackers?.length > 1 && !state.throwInsOpen
+        ? "Beigt uzbrukt"
+        : "Beigt piemest";
     updateClocks();
     if (state.result) {
       $("#game-result-title").textContent = resultMessage();
@@ -411,7 +429,10 @@ export function startTable({ connection: localConnection = null } = {}) {
       restartButton.hidden = !canShowRestart;
       restartButton.disabled = !canShowRestart;
 
-      nextRoundStatus.hidden = !canShowRestart;
+      nextRoundStatus.hidden = !nextRound?.canVote;
+      if (nextRound?.canVote && !nextRound.canContinue) {
+        nextRoundStatus.textContent = "Pārējie spēlētāji ir izgājuši. Jaunai spēlei vajadzīgi vismaz 2 spēlētāji.";
+      }
 
       if (canShowRestart) {
         nextRoundStatus.textContent =
@@ -485,22 +506,40 @@ export function startTable({ connection: localConnection = null } = {}) {
   $("#play-card").onclick = () => playDrop(selected, "attack");
   $("#take-card").onclick = () => move("take");
   $("#finish-attack").onclick = () => move("finish");
-  $("#return-to-room").onclick = async (event) => {
+  let exiting = false;
+  const exitTable = async (event) => {
     event.preventDefault();
+    if (exiting) return;
     if (busy || !connected || !state) {
       setConnectionMessage("Pagaidi, līdz atjaunojas savienojums ar serveri.");
       return;
     }
-    if (
-      state.result ||
-      state.players.find((p) => p.id === state.selfId)?.out
-    )
+    if (state.result || state.players.find((p) => p.id === state.selfId)?.out) {
+      exiting = true;
+      if (!localConnection && !queueRoomExit({ code, selfId: state.selfId })) {
+        try {
+          const response = await fetch(`/api/rooms/${encodeURIComponent(code)}/leave`, {
+            method: "POST", credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ membershipId: state.selfId }),
+          });
+          if (!response.ok) throw new Error("Neizdevās pamest spēli. Mēģini vēlreiz.");
+        } catch (error) {
+          exiting = false;
+          nextRoundStatus.hidden = false;
+          nextRoundStatus.textContent = error.message;
+          return;
+        }
+      }
       return location.assign("./index.html");
+    }
     if (!confirm("Pamest spēli un atzīt zaudējumu?")) return;
     await move("resign");
     if (state?.result || state?.players.find((p) => p.id === state.selfId)?.out)
       location.assign("./index.html");
   };
+  $("#return-to-room").onclick = exitTable;
+  $(".game-result-menu-link").onclick = exitTable;
   socket.on("connect", join);
   socket.on("game:state", accept);
   socket.on("game:error", (message) => {

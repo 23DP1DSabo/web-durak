@@ -12,6 +12,7 @@ enum Theme {
   CLASSIC
   LIGHT
   DARK
+  MODERN
 }
 
 enum UserRole {
@@ -49,6 +50,7 @@ model User {
   name                String        @map("vards") @db.VarChar(50)
   avatar              String?       @map("avatars") @db.VarChar(255)
   theme               Theme         @default(CLASSIC) @map("tema")
+  themeVersion        Int           @default(0) @map("temas_versija")
   role                UserRole      @default(USER) @map("tiesibas")
   status              UserStatus    @default(ACTIVE) @map("statuss")
   createdAt           DateTime      @default(now()) @map("izveidots") @db.DateTime(3)
@@ -58,6 +60,8 @@ model User {
   receivedFriendships Friendship[]  @relation("FriendshipRecipient")
   matchPlayers        MatchPlayer[]
   sessions            Session[]
+  roundPlayers        RoundPlayer[]
+  profileImage        UserAvatar?
 
   @@map("Lietotaji")
 }
@@ -89,6 +93,7 @@ model Match {
   gameState        Json?         @map("speles_stavoklis")
   version          Int           @default(0) @map("versija")
   players          MatchPlayer[]
+  rounds           MatchRound[]
 
   @@index([status, createdAt])
   @@map("Speles")
@@ -118,4 +123,42 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model UserAvatar {
+  userId BigInt @id @map("lietotaja_id")
+  image Bytes @map("attels") @db.MediumBlob
+  digest String @map("kontrolsumma") @db.VarChar(64)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("Profilu_atteli")
+}
+
+// Immutable completed rounds: rematches keep their own results.
+model MatchRound {
+  id BigInt @id @default(autoincrement())
+  matchId BigInt
+  mode String @db.VarChar(30)
+  startedAt DateTime @db.DateTime(3)
+  endedAt DateTime @db.DateTime(3)
+  reason String @db.VarChar(30)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  players RoundPlayer[]
+
+  @@unique([matchId, startedAt])
+  @@map("Spelu_kartas")
+}
+
+model RoundPlayer {
+  id BigInt @id @default(autoincrement())
+  roundId BigInt
+  userId BigInt?
+  guestName String? @db.VarChar(50)
+  result String @db.VarChar(10)
+  round MatchRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([roundId, userId])
+  @@index([userId, id])
+  @@map("Kartu_dalibnieki")
 }

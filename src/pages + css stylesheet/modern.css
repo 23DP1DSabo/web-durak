@@ -1,0 +1,129 @@
+/* Optional modern theme. Keep all overrides scoped to this selection. */
+body[data-theme="modern"] {
+  --modern-bg: #101d18;
+  --modern-panel: #162e24;
+  --modern-card: #1c392f;
+  --modern-text: #f5efdc;
+  --modern-muted: #b4c4b7;
+  --modern-line: #3b5143;
+  --modern-gold: #e4c27e;
+  color: var(--modern-text);
+  background: var(--modern-bg);
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  color-scheme: dark;
+}
+body[data-theme="modern"] #frontpage-content {
+  background: radial-gradient(ellipse at top, #234b38, transparent 65%), var(--modern-bg);
+  font-family: inherit;
+}
+body[data-theme="modern"] #frontpage-content::before { border: 0; }
+body[data-theme="modern"] :is(#auth-panel, #side-navigation-menu, .game-rooms, .room-side-panel, .room-dialog, .admin-users-dialog, .game-result-sign) {
+  border: 1px solid var(--modern-line);
+  border-radius: 24px;
+  outline: none;
+  clip-path: none;
+  background: var(--modern-panel);
+  color: var(--modern-text);
+  box-shadow: 0 18px 50px #07160f55;
+  font-family: inherit;
+}
+body[data-theme="modern"] :is(.auth-header h1, .matchmaking-header h1, .game-brand, .game-rooms h2, .room-side-panel h2, .content-panel h2, #account h2, .game-result-sign h2) {
+  color: var(--modern-text);
+  text-shadow: none;
+  font-family: Georgia, "Palatino Linotype", serif;
+}
+body[data-theme="modern"] :is(.eyebrow, .placeholder-section h3, .settings-section h3, .rules-section h3) { color: var(--modern-gold); }
+body[data-theme="modern"] :is(.tagline, .room-description, .room-setting-status, .settings-section small, .seat-identity p, .player-role, .settings-note) { color: var(--modern-muted); }
+body[data-theme="modern"] :is(.rules-section p, .rules-section li, .rules-section h4, .settings-section p, .auth-field label, .theme-options legend, #auth-message, .match-details, .table-status, .match-details strong) { color: var(--modern-text); }
+body[data-theme="modern"] :is(.settings-section, .rules-section, .theme-options label span, .player-list-item, .content-placeholder, .multiplayer-seat, .time-limit-options span, .room-setting-option) {
+  border: 1px solid var(--modern-line);
+  border-radius: 16px;
+  background: var(--modern-card);
+  color: var(--modern-text);
+  box-shadow: none;
+}
+body[data-theme="modern"] .theme-options input:checked + span,
+body[data-theme="modern"] .time-limit-options input:checked + span {
+  border-color: var(--modern-gold);
+  box-shadow: inset 0 0 0 1px var(--modern-gold);
+}
+body[data-theme="modern"] .theme-options label span { padding: 16px; }
+body[data-theme="modern"] #side-navigation-menu li {
+  border: 1px solid var(--modern-line);
+  border-radius: 10px;
+  background: var(--modern-card);
+  overflow: hidden;
+}
+body[data-theme="modern"] #side-navigation-menu :is(a, button) { color: var(--modern-text); border: 0; border-radius: 10px; }
+body[data-theme="modern"] #side-navigation-menu :is(a, button):hover { background: #294b3a; color: var(--modern-gold); }
+body.auth-page[data-theme="modern"] button,
+body[data-theme="modern"] :is(.game-button, .button-like, .auth-back-link, .game-exit-link, .room-dialog button, .admin-users-dialog button, .game-actions button, .game-result-actions button, .game-result-menu-link) {
+  border: 1px solid var(--modern-gold);
+  border-radius: 9px;
+  background: var(--modern-gold);
+  color: #1b2d20;
+  box-shadow: none;
+  text-shadow: none;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-weight: 700;
+}
+body[data-theme="modern"] .game-button::after { color: #34533b; }
+body.auth-page[data-theme="modern"] button:hover,
+body[data-theme="modern"] :is(.game-button, .button-like, .auth-back-link, .game-exit-link, .room-dialog button, .admin-users-dialog button, .game-actions button):hover {
+  background: #f0d399;
+  color: #1b2d20;
+  box-shadow: 0 4px 14px #0002;
+  transform: translateY(-1px);
+  filter: none;
+}
+body[data-theme="modern"] :is(.auth-back-link, .game-exit-link, .room-dialog-close, #logout, #avatar-cancel, #avatar-remove, .profile-file-picker) {
+  color: var(--modern-text);
+  border-color: var(--modern-line);
+  background: var(--modern-card);
+}
+body.auth-page[data-theme="modern"] :is(button:disabled, .button-like:has(input:disabled)),
+body[data-theme="modern"] :is(.game-button:disabled, .game-actions button:disabled) { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+body[data-theme="modern"] :is(.auth-field input, #friend-username, .room-dialog input, .admin-user-search, .admin-user-sort-menu, .admin-user-sort-menu select, .admin-user-actions select, .admin-users-table th) {
+  box-sizing: border-box;
+  border: 1px solid var(--modern-line);
+  border-radius: 9px;
+  background: var(--modern-bg);
+  color: var(--modern-text);
+  font-family: inherit;
+}
+body[data-theme="modern"] :is(input::placeholder, .admin-user-search::placeholder) { color: var(--modern-muted); }
+body[data-theme="modern"] :is(.admin-users-table td, .admin-users-table th, .room-side-panel h2) { border-color: var(--modern-line); }
+body[data-theme="modern"] .room-code { color: var(--modern-gold); background: var(--modern-card); border-color: var(--modern-line); border-radius: 12px; }
+body[data-theme="modern"] .room-setting-option input[type="checkbox"] { border-color: var(--modern-line); background: var(--modern-bg); }
+body[data-theme="modern"] .room-setting-option input[type="checkbox"]:checked { border-color: var(--modern-gold); background: #345746; }
+body[data-theme="modern"] .game-table-header { background: var(--modern-panel); border-color: var(--modern-line); box-shadow: none; }
+body[data-theme="modern"] .player-clock { border: 1px solid var(--modern-line); border-radius: 12px; background: var(--modern-card); color: var(--modern-text); box-shadow: none; }
+body[data-theme="modern"] .player-clock time { color: var(--modern-gold); }
+body[data-theme="modern"] .player-clock.is-low { border-color: #e3957b; }
+body[data-theme="modern"] .player-clock.is-low time { color: #ffb8a7; }
+body[data-theme="modern"] .multiplayer-seat.is-active { border-color: var(--modern-gold); }
+body[data-theme="modern"] .play-surface::before { border-color: var(--modern-line); background: #18372a88; box-shadow: 0 0 0 12px #284b3833; }
+body[data-theme="modern"] .card-drop-zone { color: var(--modern-text); border-color: var(--modern-line); background: var(--modern-panel); }
+body[data-theme="modern"] :is(.user-avatar, .seat-avatar) { background: #345746; color: var(--modern-text); border-color: var(--modern-gold); }
+body[data-theme="modern"] :is(.room-dialog, .admin-users-dialog, .game-result-dialog)::backdrop { background: #06130dba; backdrop-filter: blur(4px); }
+body.auth-page[data-theme="modern"] :is(.delete-account-button, .friend-remove-button) { background: #8e342c; border-color: #b96b60; color: #fff; box-shadow: none; }
+body.auth-page[data-theme="modern"] :is(.delete-account-button, .friend-remove-button):hover { background: #a14439; }
+body.auth-page[data-theme="modern"] .remove-player-button { background: transparent; border: 0; color: #e8ab98; }
+body[data-theme="modern"] .danger-zone { border-color: #975d4f; }
+body[data-theme="modern"] :is(button, a, input, summary):focus-visible { outline: 3px solid var(--modern-gold); outline-offset: 3px; }
+/* Bring back the softer profile treatment as an opt-in theme. */
+body.profile-page[data-theme="modern"] {
+  --profile-line: var(--modern-line);
+  --profile-muted: var(--modern-muted);
+  --profile-accent: var(--modern-gold);
+}
+body.profile-page[data-theme="modern"] .auth-header { align-items: flex-start; }
+body.profile-page[data-theme="modern"] .auth-header h1 { font-size: 28px; color: var(--modern-gold); }
+body.profile-page[data-theme="modern"] #account-title { font-size: clamp(30px, 4vw, 48px); }
+body.profile-page[data-theme="modern"] #profile-avatar { width: 132px; height: 132px; font-size: 48px; box-shadow: 0 0 0 7px var(--modern-card); }
+body.profile-page[data-theme="modern"] #account button { font-size: 14px; }
+@media (max-width: 700px) {
+  body.profile-page[data-theme="modern"] #profile-avatar { width: 80px; height: 80px; font-size: 32px; }
+  body.profile-page[data-theme="modern"] #account-title { font-size: 28px; }
+  body[data-theme="modern"] :is(#auth-panel, #side-navigation-menu, .game-rooms, .room-side-panel) { border-radius: 18px; }
+}

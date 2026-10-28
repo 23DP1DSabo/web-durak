@@ -61,9 +61,12 @@ test("bot declares pickup, waits for player throw-ins and confirmation, and rest
     move: { type: "attack", cardId: "b", bout: 0 },
   });
   expect(response.game.attacks).toHaveLength(2);
+  expect(response.game.legal.finish).toBe(true);
+  await vi.advanceTimersByTimeAsync(5000);
+  view = (await connection.emitWithAck("game:join", {})).game;
+  expect(view.attacks).toHaveLength(2);
   response = await connection.emitWithAck("game:move", {
-    version: response.game.version,
-    move: { type: "finish", bout: 0 },
+    version: view.version, move: { type: "finish", bout: 0 },
   });
   expect(response.game.attacks).toHaveLength(0);
   const hand = response.game.hand;
@@ -135,7 +138,7 @@ test("local timeout reports completion and a restored finished game retries the 
   restored.connect();
   const view = (await restored.emitWithAck("game:join", {})).game;
   await Promise.resolve();
-  expect(view.result.reason).toBe("timeout");
+  expect(view.result.reason).toBe("inactive");
   expect(retry).toHaveBeenCalledTimes(1);
   restored.disconnect();
 });

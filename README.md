@@ -61,6 +61,42 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projektā
 
 ## Multiplayer (2–6 spēlētāji)
 
+Spēlē ar 3+ dalībniekiem sākumā piemet tikai galvenais uzbrucējs. **Beigt uzbrukt**
+atļauj piemest arī otram aizsarga kaimiņam; pirmais uzbrucējs saglabā piemešanas
+tiesības. Pēc katras jaunas kārts iepriekšējie apstiprinājumi tiek atcelti. Kad
+kārtis nokautas vai aizsargs izvēlējies paņemt, abi uzbrucēji apstiprina **Beigt piemest**.
+Arī sasniedzot limitu (6 kārtis vai aizsarga kāršu skaits izspēles sākumā), pēc
+aizsardzības vai paņemšanas izvēles abiem uzbrucējiem jānospiež **Beigt piemest**.
+Kārtis paliek uz galda līdz abu apstiprinājumam; automātiskas pauzes un pārejas nav.
+Divu spēlētāju spēlē apstiprina vienīgais uzbrucējs. Spēlē pret botu bots apstiprina
+savu piemešanas beigšanu pats.
+
+
+Pēc partijas beigām **Turpināt nākamo kārtu** atzīmē gatavību spēlēt vēlreiz.
+Ja visi dalībnieki piekrīt revanšam, jaunā kārta sākas automātiski.
+Ja kāds izvēlas **Galvenā izvēlne** vai **Iziet**, pārējie atgriežas kopīgā jaunā
+istabā (lobby). Tur var uzaicināt citus vai sākt spēli ar atlikušo sastāvu;
+viens palicis spēlētājs var uzaicināt draugu vai spēlēt pret botu. Istabas režīms,
+laika limits un viesu atļauja saglabājas; iepriekšējās partijas rezultāti paliek
+iepriekšējā spēles ierakstā. Kamēr kāds vēl nav atbildējis, revanša balsojums gaida.
+
+
+Poga **Izveidot istabu** sāk servera pieprasījumu uzreiz un rāda **Veido istabu…**.
+Istabas lapa atveras ar servera apstiprinātu dalībnieku sarakstu un iestatījumiem.
+Izveides, ātrās pievienošanās un pievienošanās pēc koda atbilde tiek vienreiz nodota
+istabas lapai, neveicot atkārtotu izveides/pievienošanās pieprasījumu. Lapas pārlāde
+atkal saņem svaigus datus no servera; izveides kļūdas parādās pirms pārejas uz istabu.
+
+Izejot no gaidīšanas istabas, sākumlapa atveras uzreiz un fonā nosūta iziešanas
+pieprasījumu. Nepabeigtā darbība saglabājas cilnes `sessionStorage`, lai to varētu
+atkārtot pēc pārlādes vai savienojuma atjaunošanas. Kļūdas gadījumā sākumlapā
+redzama poga **Mēģināt vēlreiz**; jauna pievienošanās sagaida iepriekšējās iziešanas
+pabeigšanu. Pieprasījums ir piesaistīts konkrētajai dalībai, lai aizkavēts atkārtojums
+neizņemtu spēlētāju, kas vēlāk pievienojies no jauna. Ja pārlūka krātuve nav pieejama,
+saglabājas iziešana ar servera apstiprinājuma gaidīšanu.
+Dalībniekam dzēš dalību; izveidotājam istabu atzīmē kā pabeigtu (`FINISHED`).
+Aktīvā multiplayer spēlē iziešana ir padošanās.
+
 Pēc atjauninājuma palaid `npm ci`, `npm run db:generate` un `npm run db:migrate`,
 pēc tam pārstartē `npm run server` un `npm run dev`. Migrācija pievieno spēles
 stāvokļa JSON un versiju; esošie konti netiek dzēsti.
@@ -154,3 +190,69 @@ pielāgotas attālinātai DB; noklusējumus skatīt `lib/prisma.ts`.
 
 Lokālam salīdzinājumam PowerShell: `$env:DURAK_BENCHMARK="1"; npm run test:multiplayer:db`.
 Tas izvada darbību laikus; tie ir atkarīgi no tīkla un DB atrašanās vietas.
+
+
+### Profila bilde
+
+Konta lapā var izvēlēties JPG, PNG vai WebP attēlu (līdz 5 MB un 20 megapikseļiem),
+apskatīt priekšskatījumu un nospiest **Saglabāt bildi**. Izvēli var atcelt, bet saglabāto
+bildi — noņemt. Attēls tiek apgriezts kvadrātā no centra un saglabāts 512 × 512 WebP
+formātā bez sākotnējā faila metadatiem. Animēti attēli netiek pieņemti.
+
+Bildes glabājas kopīgās MySQL datubāzes tabulā `Profilu_atteli`; lietotāja `avatars`
+lauks satur tikai attēla API adresi. Tās nav atkarīgas no servera lokālajiem failiem.
+Bildes redzamas profilā, draugu sarakstā, istabā un multiplayer spēlē. Konta dzēšana
+izdzēš arī tā bildi. Pēc šī atjauninājuma palaid `npm ci`, `npm run db:generate` un
+`npm run db:migrate`, pēc tam pārstartē serveri.
+
+
+### Tēmas un navigācijas ielāde
+
+Izvēlētā tēma uzreiz saglabājas `localStorage` un tiek piemērota pirms lapas satura
+attēlošanas. Pieslēgta lietotāja izvēle fonā saglabājas arī DB, lai darbotos citās
+ierīcēs. Nepabeigtu saglabāšanu pārņem nākamā lapa; `temas_versija` pasargā jaunāko
+izvēli no novēlotiem vecās lapas pieprasījumiem. Viesu izvēle paliek pārlūkā.
+
+Navigācija izmanto līdz piecām minūtēm derīgu `sessionStorage` priekšskatījumu
+(tikai ID, lietotājvārds un loma), kamēr fonā pārbauda sesiju. Tas nepiešķir
+piekļuves tiesības: serveris joprojām pārbauda katru aizsargāto API pieprasījumu.
+Izrakstīšanās un nederīga sesija šo priekšskatījumu notīra.
+
+Pēc atjauninājuma palaid `npm run db:generate`, `npm run db:migrate` un pārstartē serveri.
+
+
+Profila lapai ir atsevišķs, līdz piecām minūtēm derīgs `sessionStorage`
+priekšskatījums: lietotājvārds, vārds, e-pasts, bildes adrese un konta tēmas dati.
+To atjauno sekmīga konta pārbaude un profila izmaiņas. Tas ļauj uzreiz parādīt
+profilu, kamēr sesiju pārbauda fonā. Līdz pārbaudei rediģēšana ir atspējota.
+Izrakstoties, dzēšot kontu vai saņemot 401, abi konta priekšskatījumi tiek notīrīti.
+Paroles un sesijas atslēgas pārlūka glabātuvē netiek saglabātas.
+
+
+### Modernā tēma
+
+Sadaļā **Tēmas → Modernā** pieejams tumši zaļš noformējums ar noapaļotiem paneļiem
+un zeltainām pogām, balstīts uz sākotnējo atjaunotā profila izskatu. Tas darbojas
+sākumlapā, profilā, draugu un iestatījumu sadaļās, istabā un spēlē.
+Izvēle tūlīt saglabājas pārlūkā, bet pieslēgtam lietotājam — arī kontā (`MODERN`).
+Pēc atjauninājuma palaid `npm run db:generate`, `npm run db:migrate` un pārstartē serveri.
+
+
+### Spēļu vēsture un profila statistika
+
+Pieslēgtam lietotājam sākumlapā pieejama **Spēļu vēsture**, bet profilā — spēļu,
+uzvaru, zaudējumu skaits un uzvaru procentuālā daļa no visām kārtām.
+Uzskaita tikai servera pabeigtās multiplayer kārtas; revanšs ir jauna kārta.
+Spēles pret botu, nepabeigtas spēles un aizvērtas gaidīšanas istabas neieskaitās.
+Vēsture ielādējas pa 20 ierakstiem, bet statistiku DB apkopo atsevišķi no profila.
+
+Pēc koda atjaunināšanas palaid `npm run db:generate`, `npm run db:migrate` un
+pārstartē serveri. Migrācija `20261028030000_match_history` izveido kārtu un to
+dalībnieku tabulas, kā arī pārnes saglabātos pabeigto multiplayer spēļu rezultātus.
+Iepriekš ar revanšu pārrakstītas kārtas atjaunot nav iespējams.
+Jaunas kārtas rezultāts un vēsture saglabājas vienā transakcijā; atkārtots
+pabeigšanas pieprasījums nerada dublikātu. Konta dzēšana atsaista vēstures
+dalībnieku no lietotāja, saglabājot anonīmu rezultātu.
+
+API `GET /api/me/history?before=<cursor>` un `GET /api/me/statistics` atgriež tikai
+sesijas lietotāja datus. Vēsturē netiek izpausti e-pasti, sesijas vai kārtis.

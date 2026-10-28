@@ -1,3 +1,4 @@
+import { createHistoryRouter } from "./router/history.js";
 import "dotenv/config";
 import {
   createHash,
@@ -7,6 +8,7 @@ import {
 } from "node:crypto";
 import { promisify } from "node:util";
 import express from "express";
+import { createAvatarRouter } from "./router/avatar.js";
 
 import { createFriendsRouter } from "./router/friends.js";
 import { GameError } from "./lib/multiplayer.js";
@@ -129,7 +131,7 @@ export function createAuthApp(prisma) {
 
   function publicUser(user) {
     return { id: String(user.id), email: user.email, name: user.name,
-      username: user.username, avatar: user.avatar, theme: user.theme, role: user.role };
+      username: user.username, avatar: user.avatar, theme: user.theme, themeVersion: user.themeVersion, role: user.role };
   }
 
   async function createSession(db, userId, req) {
@@ -293,6 +295,10 @@ export function createAuthApp(prisma) {
     }
   });
 
+  authApp.use("/api/me", createHistoryRouter(prisma, { getAuthenticatedUser }));
+
+  authApp.use("/api", createAvatarRouter(prisma, { getAuthenticatedUser, publicUser }));
+
   authApp.post("/api/auth/logout", async (req, res) => {
     const token = getSessionToken(req);
 
@@ -420,16 +426,24 @@ export function createAuthApp(prisma) {
       if (!user) return;
 
       const theme = req.body?.theme;
-      if (!["CLASSIC", "LIGHT", "DARK"].includes(theme)) {
+      if (!["CLASSIC", "LIGHT", "DARK", "MODERN"].includes(theme)) {
         return res.status(400).json({ error: "Izvēlieties derīgu tēmu." });
       }
 
+      const expectedVersion = req.body?.expectedVersion;
+      if (expectedVersion !== undefined && (!Number.isSafeInteger(expectedVersion) || expectedVersion < 0)) {
+        return res.status(400).json({ error: "Nederīga tēmas versija." });
+      }
+      // A delayed request from the previous page cannot overwrite a newer choice.
       const updatedUser = await prisma.user.update({
-        where: { id: user.id },
-        data: { theme },
+        where: { id: user.id, ...(expectedVersion === undefined ? {} : { themeVersion: expectedVersion }) },
+        data: { theme, themeVersion: { increment: 1 } },
       });
       return res.json({ user: publicUser(updatedUser) });
     } catch (error) {
+      if (error?.code === "P2025") {
+        return res.status(409).json({ error: "Tēma jau mainījusies. Atjauno konta datus un mēģini vēlreiz." });
+      }
       console.error("Theme update failed:", error);
       return res.status(500).json({ error: "Neizdevās saglabāt tēmu." });
     }

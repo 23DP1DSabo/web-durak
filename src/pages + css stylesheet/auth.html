@@ -5,19 +5,30 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Konts | DuraKlash</title>
         <link rel="stylesheet" href="./main.css">
+        <link rel="stylesheet" href="./modern.css">
+        <link rel="stylesheet" href="./profile.css">
+        <link rel="stylesheet" href="./history.css">
     </head>
-    <body class="auth-page clean-panels-page">
+    <body class="auth-page profile-page clean-panels-page">
+        <script>
+            try {
+                const theme = localStorage.getItem("durak-theme");
+                if (["classic", "light", "dark", "modern"].includes(theme)) document.body.dataset.theme = theme;
+            } catch { /* Default theme remains usable when storage is disabled. */ }
+        </script>
         <a class="auth-back-link" href="./index.html" aria-label="Atpakaļ uz sākumu">Atpakaļ</a>
-        <main id="auth-panel" class="settings-panel">
+        <main id="auth-panel" class="profile-panel" aria-busy="true">
             <header class="auth-header">
                 <h1>DuraKlash</h1>
             </header>
-            <div class="auth-tabs" role="group" aria-label="Konta darbība">
+            <p id="account-loading" role="status">Ielādē kontu…</p>
+            <button id="retry-account" type="button" hidden>Mēģināt vēlreiz</button>
+            <div class="auth-tabs" hidden role="group" aria-label="Konta darbība">
                 <button id="show-login" type="button" aria-pressed="true">Pieslēgties</button>
                 <button id="show-register" type="button" aria-pressed="false">Reģistrēties</button>
             </div>
 
-            <form id="login-form">
+            <form id="login-form" hidden>
                 <h2>Pieslēgties</h2>
                 <div class="auth-field">
                     <label for="login-email">E-pasts</label>
@@ -56,14 +67,41 @@
                 <button type="submit">Izveidot kontu</button>
             </form>
 
+            <p id="auth-message" role="status" aria-live="polite"></p>
             <section id="account" hidden>
-                <h2 id="account-title"></h2>
-                <p id="account-name"></p>
-                <p id="account-email"></p>
-                <div id="account-settings">
-                    <section class="settings-section" aria-labelledby="profile-settings-heading">
-                        <h3 id="profile-settings-heading">Profils</h3>
-                        <p>Pašreizējais lietotājvārds: <strong id="current-username"></strong></p>
+                <div class="profile-topbar"><h2>Mans profils</h2><button id="logout" type="button">Izrakstīties</button></div>
+                <header class="profile-hero">
+                    <div id="profile-avatar" class="profile-avatar-large"></div>
+                    <div class="profile-heading"><h2 id="account-title"></h2><p id="account-name"></p></div>
+                </header>
+                <section id="profile-statistics" class="settings-section profile-statistics" aria-labelledby="statistics-heading" aria-busy="false">
+                    <div class="history-heading"><h3 id="statistics-heading">Spēļu statistika</h3><a href="./history.html">Skatīt spēļu vēsturi →</a></div>
+                    <dl class="statistics-grid">
+                        <div><dt>Spēles</dt><dd data-stat="total">—</dd></div>
+                        <div><dt>Uzvaras</dt><dd data-stat="wins">—</dd></div>
+                        <div><dt>Zaudējumi</dt><dd data-stat="losses">—</dd></div>
+                        <div><dt>Uzvaru īpatsvars</dt><dd data-stat="winRate">—</dd></div>
+                    </dl>
+                    <p data-stat-status role="status" aria-live="polite">Ielādē statistiku…</p>
+                    <button data-stat-retry type="button" hidden>Mēģināt vēlreiz</button>
+                    <small>Tikai pabeigtas multiplayer kārtas. Katrs revanšs ir atsevišķa spēle.</small>
+                </section>
+                <div class="profile-grid">
+                    <section class="profile-card settings-section" aria-labelledby="avatar-heading">
+                        <h3 id="avatar-heading">Profila bilde</h3>
+                        <p>Šī bilde būs redzama draugiem, istabā un pie spēles galda.</p>
+                        <div class="profile-photo-row"><div id="avatar-preview"></div><span id="avatar-file-name">Izvēlies savu profila bildi.</span></div>
+                        <form id="avatar-form">
+                            <label class="profile-file-picker button-like" for="avatar-file">Izvēlēties attēlu<input id="avatar-file" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="avatar-help"></label>
+                            <small id="avatar-help">JPG, PNG vai WebP · līdz 5 MB un 20 MP.<br>Attēls tiks apgriezts kvadrātā no centra.</small>
+                            <div class="profile-actions"><button id="avatar-save" type="submit" disabled>Saglabāt bildi</button><button id="avatar-cancel" type="button" hidden>Atcelt</button></div>
+                        </form>
+                        <button id="avatar-remove" type="button" hidden>Noņemt profila bildi</button>
+                        <p id="avatar-message" role="status" aria-live="polite"></p>
+                    </section>
+                    <section class="profile-card settings-section" aria-labelledby="profile-settings-heading">
+                        <h3 id="profile-settings-heading">Konta informācija</h3>
+                        <dl class="profile-facts"><div><dt>E-pasts</dt><dd id="account-email"></dd></div><div><dt>Lietotājvārds</dt><dd id="current-username"></dd></div></dl>
                         <form id="username-form">
                             <div class="auth-field">
                                 <label for="new-username">Jauns lietotājvārds</label>
@@ -72,9 +110,8 @@
                             <button type="submit">Nomainīt lietotājvārdu</button>
                         </form>
                     </section>
-                    <section class="settings-section" aria-labelledby="password-settings-heading">
-                        <h3 id="password-settings-heading">Parole</h3>
-                        <form id="password-form">
+                </div>
+                <details class="profile-card settings-section profile-details"><summary><span>Parole un drošība<small>Atjauno savu piekļuves paroli.</small></span><span aria-hidden="true">＋</span></summary><form id="password-form">
                             <div class="auth-field">
                                 <label for="current-password">Pašreizējā parole</label>
                                 <input id="current-password" name="currentPassword" type="password" autocomplete="current-password" required maxlength="128">
@@ -89,23 +126,16 @@
                                 <input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" required minlength="8" maxlength="128">
                             </div>
                             <button type="submit">Nomainīt paroli</button>
-                        </form>
-                    </section>
-                    <section class="settings-section danger-zone" aria-labelledby="delete-account-heading">
-                        <h3 id="delete-account-heading">Dzēst kontu</h3>
-                        <p>Konts un draugu saites tiks dzēstas. Spēļu rezultāti tiks saglabāti anonimizētā veidā. Pirms dzēšanas izej no gaidošajām istabām un pabeidz aktīvās spēles.</p>
-                        <form id="delete-account-form">
+                        </form></details>
+                <details class="profile-card settings-section profile-details danger-zone"><summary><span>Konta dzēšana<small>Neatgriezeniski dzēst savu kontu.</small></span><span aria-hidden="true">＋</span></summary>
+                    <p>Konts un draugu saites tiks dzēstas. Spēļu rezultāti tiks saglabāti anonimizētā veidā. Pirms dzēšanas izej no gaidošajām istabām un pabeidz aktīvās spēles.</p><form id="delete-account-form">
                             <div class="auth-field">
                                 <label for="delete-account-password">Pašreizējā parole</label>
                                 <input id="delete-account-password" name="currentPassword" type="password" autocomplete="current-password" required maxlength="128">
                             </div>
                             <button class="delete-account-button" type="submit">Neatgriezeniski dzēst kontu</button>
-                        </form>
-                    </section>
-                </div>
-                <button id="logout" type="button">Izrakstīties</button>
+                        </form></details>
             </section>
-            <p id="auth-message" role="status" aria-live="polite"></p>
         </main>
         <script type="module" src="../js/auth.js"></script>
         <script type="module" src="../js/theme.js"></script>

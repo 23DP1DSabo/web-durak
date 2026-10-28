@@ -1,3 +1,4 @@
+import { renderAvatar } from "./avatar.js";
 
 const searchForm = document.querySelector("#friend-search-form");
 const usernameInput = document.querySelector("#friend-username");
@@ -55,7 +56,12 @@ function addUserItem(list, user, buttons = [], className = "") {
     const name = document.createElement("span");
 
     name.textContent = user.username;
-    item.append(name);
+    const identity = document.createElement("span");
+    identity.className = "friend-identity";
+    const avatar = document.createElement("span");
+    renderAvatar(avatar, user);
+    identity.append(avatar, name);
+    item.append(identity);
 
     if (buttons.length) {
         const actions = document.createElement("div");

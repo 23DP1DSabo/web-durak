@@ -9,8 +9,15 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" type="text/css" href="./main.css">
+        <link rel="stylesheet" href="./modern.css">
     </head>
     <body>
+        <script>
+            try {
+                const theme = localStorage.getItem("durak-theme");
+                if (["classic", "light", "dark", "modern"].includes(theme)) document.body.dataset.theme = theme;
+            } catch { /* Default theme remains usable when storage is disabled. */ }
+        </script>
         <div id="frontpage-content">
             <button
                 id="frontpage-menu-toggle"
@@ -27,6 +34,10 @@
                 <header class="matchmaking-header">
                     <h1>DuraKlash</h1>
                 </header>
+                <div id="room-exit-notice" role="status" aria-live="polite" hidden>
+                    <span id="room-exit-message"></span>
+                    <button id="retry-room-exit" type="button" hidden>Mēģināt vēlreiz</button>
+                </div>
                 <div id="matchmaking-mode-selection">
                 <div id="regular-mode-games" class="game-rooms">
                     <h2>Spēles istabas</h2>
@@ -44,6 +55,7 @@
             </div>
             <nav id="side-navigation-menu">
                 <li><a id="account-link" href="./auth.html">Pieslēgties</a></li>
+                <li id="history-nav-item" hidden><a href="./history.html">Spēļu vēsture</a></li>
                 <li id="friends-nav-item" hidden><a href="./friends.html">Draugi</a></li>
                 <li id="admin-nav-item" hidden><button id="admin-users-open" type="button">Administrēšana</button></li>
                 <li><a href="./rules.html">Pamācība</a></li>
@@ -56,6 +68,7 @@
             <h2 id="room-dialog-title">Spēles istaba</h2>
             <div id="room-choice-actions" class="room-dialog-actions">
                 <button type="button" data-room-action="create">Izveidot istabu</button>
+                <p id="create-room-message" role="status" aria-live="polite" hidden></p>
                 <button type="button" data-room-action="show-join">Pievienoties istabai</button>
             </div>
             <form id="join-room-form" hidden novalidate>

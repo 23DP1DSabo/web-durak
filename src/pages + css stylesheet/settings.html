@@ -5,8 +5,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Tēmas | DuraKlash</title>
         <link rel="stylesheet" href="./main.css">
+        <link rel="stylesheet" href="./modern.css">
     </head>
     <body class="auth-page clean-panels-page">
+        <script>
+            try {
+                const theme = localStorage.getItem("durak-theme");
+                if (["classic", "light", "dark", "modern"].includes(theme)) document.body.dataset.theme = theme;
+            } catch { /* Default theme remains usable when storage is disabled. */ }
+        </script>
         <a class="auth-back-link" href="./index.html" aria-label="Atpakaļ uz sākumu">Atpakaļ</a>
         <main id="auth-panel" class="content-panel settings-panel">
             <header class="auth-header">
@@ -20,6 +27,7 @@
                     <label><input type="radio" name="theme" value="CLASSIC"><span><strong>Klasiskā</strong><small>Sākotnējais izskats ar galda un koka attēliem.</small></span></label>
                     <label><input type="radio" name="theme" value="LIGHT"><span><strong>Gaišā</strong><small>Gaišs, vienkāršots lapu noformējums.</small></span></label>
                     <label><input type="radio" name="theme" value="DARK"><span><strong>Tumšā</strong><small>Tumšs, vienkāršots lapu noformējums.</small></span></label>
+                    <label><input type="radio" name="theme" value="MODERN"><span><strong>Modernā</strong><small>Tumši zaļi paneļi, noapaļoti stūri un zeltaini akcenti.</small></span></label>
                 </fieldset>
                 <p class="settings-note">Pieslēdzoties tēma tiek saglabāta tavā kontā; viesiem — šajā pārlūkā.</p>
             </section>

@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
           gameTable: 'src/pages + css stylesheet/game-table.html',
           auth: 'src/pages + css stylesheet/auth.html',
           friends: 'src/pages + css stylesheet/friends.html',
+          history: 'src/pages + css stylesheet/history.html',
           rules: 'src/pages + css stylesheet/rules.html',
           settings: 'src/pages + css stylesheet/settings.html',
         },
