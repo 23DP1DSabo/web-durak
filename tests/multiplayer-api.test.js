@@ -20,7 +20,8 @@ function database() {
             .map((p) => ({ ...p, user: null })),
         })
       : null;
-  const matches = (r, w) => Object.entries(w).every(([k, v]) => r[k] === v);
+  const matches = (r, w) => Object.entries(w).every(([k, v]) =>
+    v && typeof v === "object" && Array.isArray(v.in) ? v.in.includes(r[k]) : r[k] === v);
   const patch = (r, data) => {
     for (const [k, v] of Object.entries(data))
       r[k] =
@@ -44,10 +45,11 @@ function database() {
           ...rest,
         };
         rooms.push(r);
-        if (ps)
-          await db.matchPlayer.create({
-            data: { matchId: r.id, ...ps.create },
-          });
+        if (ps) {
+          for (const data of Array.isArray(ps.create) ? ps.create : [ps.create]) {
+            await db.matchPlayer.create({ data: { matchId: r.id, ...data } });
+          }
+        }
         return hydrate(r);
       },
       findUnique: async ({ where }) =>
@@ -726,4 +728,131 @@ test("repeated background resignation does not apply another loss or advance the
   const before = await app.locals.matches.load("TESTROOM");
   expect((await request("/TESTROOM/leave", intent, a.cookie)).status).toBe(200);
   expect(await app.locals.matches.load("TESTROOM")).toEqual(before);
+});
+
+
+async function finishedRound(count = 3) {
+  const members = await setupMany(count);
+  const room = await app.locals.matches.load("TESTROOM");
+  const game = structuredClone(room.gameState);
+  const ids = game.players.map((p) => p.id);
+  game.phase = "finished";
+  game.result = { loser: ids.at(-1), losers: [ids.at(-1)], winners: ids.slice(0, -1), reason: "cards" };
+  await db.match.update({ where: { id: room.id }, data: {
+    gameState: game, status: "FINISHED", endedAt: new Date(), version: { increment: 1 },
+  } });
+  for (const p of room.players) {
+    await db.matchPlayer.update({ where: { id: p.id }, data: { result: String(p.id) === ids.at(-1) ? "DURAK" : "WIN" } });
+  }
+  return members;
+}
+async function voteNext(socket) {
+  const current = await join(socket);
+  const result = await socket.timeout(3000).emitWithAck("game:ready-next", {
+    code: "TESTROOM", version: current.game.version,
+  });
+  expect(result.error).toBeUndefined();
+  return result.game;
+}
+
+test.each([0, 2])("two ready players return to a shared lobby when player %i declines", async (leaverIndex) => {
+  const members = await finishedRound();
+  const leaver = members[leaverIndex];
+  const staying = members.filter((_, i) => i !== leaverIndex);
+  const sockets = await Promise.all(staying.map((m) => connect(m.cookie)));
+  await voteNext(sockets[0]);
+  expect((await voteNext(sockets[1])).nextRound).toMatchObject({ readyCount: 2, required: 3 });
+  const before = await app.locals.matches.load("TESTROOM");
+  const broadcast = new Promise((resolve) => {
+    const returned = (game) => {
+      if (!game.nextRound?.lobbyCode) return;
+      sockets[0].off("game:state", returned);
+      resolve(game);
+    };
+    sockets[0].on("game:state", returned);
+  });
+  const intent = { membershipId: leaver.body.room.selfId };
+  expect((await request("/TESTROOM/leave", intent, leaver.cookie)).status).toBe(200);
+  const game = await broadcast;
+  expect(game.result).toEqual(before.gameState.result);
+  const code = game.nextRound.lobbyCode;
+  expect((await join(sockets[1])).game.nextRound.lobbyCode).toBe(code);
+  const lobby = await app.locals.matches.load(code);
+  expect(lobby.status).toBe("WAITING");
+  expect(lobby.gameState).toBeNull();
+  expect(lobby.players.map((p) => p.guestName)).toEqual(staying.map((m) => m.body.room.players.at(-1).name));
+  expect(lobby).toMatchObject({ mode: before.mode, timeLimitSeconds: before.timeLimitSeconds, allowGuests: before.allowGuests });
+  const saved = await app.locals.matches.load("TESTROOM");
+  expect(saved.status).toBe("FINISHED");
+  expect(saved.players.map((p) => p.result)).toEqual(before.players.map((p) => p.result));
+  expect((await request("/TESTROOM/leave", intent, leaver.cookie)).status).toBe(200);
+  expect(await app.locals.matches.load("TESTROOM")).toEqual(saved);
+  for (const m of staying) {
+    const restored = await request(`/${code}/join`, { name: "Ignored" }, m.cookie);
+    expect(restored.body.room.selfId).toBeTruthy();
+    expect(restored.body.room.players).toHaveLength(2);
+  }
+  // The oldest remaining participant becomes the new host and can start manually.
+  expect((await request(`/${code}/start`, {}, staying[0].cookie)).body.room.status).toBe("active");
+});
+
+test("a decline before voting sends remaining players to the lobby and prevents another rematch", async () => {
+  const [a, b, c] = await finishedRound();
+  await request("/TESTROOM/leave", { membershipId: c.body.room.selfId }, c.cookie);
+  const sa = await connect(a.cookie), sb = await connect(b.cookie), sc = await connect(c.cookie);
+  const code = (await join(sa)).game.nextRound.lobbyCode;
+  expect(code).toBeTruthy();
+  expect((await join(sb)).game.nextRound.lobbyCode).toBe(code);
+  const departed = (await join(sc)).game;
+  expect(departed.nextRound.lobbyCode).toBeNull();
+  expect(departed.nextRound.canVote).toBe(false);
+  expect((await sc.timeout(3000).emitWithAck("game:ready-next", { code: "TESTROOM", version: departed.version })).status).toBe(403);
+  expect((await voteNext(sa)).nextRound.lobbyCode).toBe(code);
+  expect((await app.locals.matches.load(code)).players).toHaveLength(2);
+});
+
+test("one remaining player returns to a lobby instead of waiting for a rematch alone", async () => {
+  const [a, b] = await finishedRound(2);
+  const sa = await connect(a.cookie);
+  await voteNext(sa);
+  await request("/TESTROOM/leave", { membershipId: b.body.room.selfId }, b.cookie);
+  const code = (await join(sa)).game.nextRound.lobbyCode;
+  expect((await app.locals.matches.load(code)).players).toHaveLength(1);
+  const start = await request(`/${code}/start`, {}, a.cookie);
+  expect(start.body.room).toMatchObject({ status: "active", multiplayer: false });
+});
+
+test("a second departure from the result screen also removes the transferred lobby membership", async () => {
+  const [a, b, c] = await finishedRound();
+  await request("/TESTROOM/leave", { membershipId: c.body.room.selfId }, c.cookie);
+  const old = await app.locals.matches.load("TESTROOM");
+  const code = old.gameState.nextRoundLobby.code;
+  await request("/TESTROOM/leave", { membershipId: b.body.room.selfId }, b.cookie);
+  expect((await app.locals.matches.load(code)).players).toHaveLength(1);
+  const sa = await connect(a.cookie);
+  expect((await join(sa)).game.nextRound.lobbyCode).toBe(code);
+});
+
+test("unanimous votes still start the next round directly", async () => {
+  const members = await finishedRound();
+  const sockets = await Promise.all(members.map((m) => connect(m.cookie)));
+  await voteNext(sockets[0]);
+  await voteNext(sockets[1]);
+  expect((await voteNext(sockets[2])).result).toBeNull();
+  expect((await app.locals.matches.load("TESTROOM")).status).toBe("ACTIVE");
+});
+
+test("failed lobby persistence rolls back departure and votes without broadcasting", async () => {
+  const [a, b, c] = await finishedRound();
+  await voteNext(await connect(a.cookie));
+  await voteNext(await connect(b.cookie));
+  const service = app.locals.matches;
+  const before = await service.load("TESTROOM");
+  const who = await service.identity({ headers: { cookie: c.cookie } });
+  let broadcasts = 0;
+  service.events.on("changed", () => broadcasts++);
+  db.match.create = async () => { throw new Error("Lobby creation failed"); };
+  await expect(service.leave("TESTROOM", who)).rejects.toThrow("Lobby creation failed");
+  expect(await service.load("TESTROOM")).toEqual(before);
+  expect(broadcasts).toBe(0);
 });

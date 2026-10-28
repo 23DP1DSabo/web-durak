@@ -268,3 +268,4 @@ export function chooseRandomCard(cards, random = Math.random) {
   if (cards.length === 0) return null;
   return cards[Math.floor(random() * cards.length)];
 }
+

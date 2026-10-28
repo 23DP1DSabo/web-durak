@@ -1,3 +1,4 @@
+import { queueRoomExit } from "./room-exit.js";
 import { io } from "socket.io-client";
 import { attachCardDrag, dropMove } from "./card-drag.js";
 import winnerIcon from "../images/crown_winner.png";
@@ -118,8 +119,20 @@ export function startTable({ connection: localConnection = null } = {}) {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   };
   let rejoinTimer = null;
+  let returningToLobby = false;
   function accept(game) {
     if (state && game.version < state.version) return;
+    if (game.nextRound?.lobbyCode && !localConnection) {
+      if (returningToLobby) return;
+      returningToLobby = true;
+      clearTimeout(rejoinTimer);
+      const url = new URL("./room.html", location.href);
+      url.searchParams.set("code", game.nextRound.lobbyCode);
+      url.searchParams.set("mode", game.mode);
+      url.searchParams.set("role", "player");
+      location.replace(url);
+      return;
+    }
     clearTimeout(rejoinTimer);
     connected = true;
     connection.textContent = "Savienots";
@@ -394,7 +407,10 @@ export function startTable({ connection: localConnection = null } = {}) {
       restartButton.hidden = !canShowRestart;
       restartButton.disabled = !canShowRestart;
 
-      nextRoundStatus.hidden = !canShowRestart;
+      nextRoundStatus.hidden = !nextRound?.canVote;
+      if (nextRound?.canVote && !nextRound.canContinue) {
+        nextRoundStatus.textContent = "Pārējie spēlētāji ir izgājuši. Jaunai spēlei vajadzīgi vismaz 2 spēlētāji.";
+      }
 
       if (canShowRestart) {
         nextRoundStatus.textContent =
@@ -468,22 +484,40 @@ export function startTable({ connection: localConnection = null } = {}) {
   $("#play-card").onclick = () => playDrop(selected, "attack");
   $("#take-card").onclick = () => move("take");
   $("#finish-attack").onclick = () => move("finish");
-  $("#return-to-room").onclick = async (event) => {
+  let exiting = false;
+  const exitTable = async (event) => {
     event.preventDefault();
+    if (exiting) return;
     if (busy || !connected || !state) {
       connection.textContent = "Pagaidi, līdz atjaunojas savienojums ar serveri.";
       return;
     }
-    if (
-      state.result ||
-      state.players.find((p) => p.id === state.selfId)?.out
-    )
+    if (state.result || state.players.find((p) => p.id === state.selfId)?.out) {
+      exiting = true;
+      if (!localConnection && !queueRoomExit({ code, selfId: state.selfId })) {
+        try {
+          const response = await fetch(`/api/rooms/${encodeURIComponent(code)}/leave`, {
+            method: "POST", credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ membershipId: state.selfId }),
+          });
+          if (!response.ok) throw new Error("Neizdevās pamest spēli. Mēģini vēlreiz.");
+        } catch (error) {
+          exiting = false;
+          nextRoundStatus.hidden = false;
+          nextRoundStatus.textContent = error.message;
+          return;
+        }
+      }
       return location.assign("./index.html");
+    }
     if (!confirm("Pamest spēli un atzīt zaudējumu?")) return;
     await move("resign");
     if (state?.result || state?.players.find((p) => p.id === state.selfId)?.out)
       location.assign("./index.html");
   };
+  $("#return-to-room").onclick = exitTable;
+  $(".game-result-menu-link").onclick = exitTable;
   socket.on("connect", join);
   socket.on("game:state", accept);
   socket.on("game:error", (message) => {

@@ -61,6 +61,15 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projektā
 
 ## Multiplayer (2–6 spēlētāji)
 
+Pēc partijas beigām **Turpināt nākamo kārtu** atzīmē gatavību spēlēt vēlreiz.
+Ja visi dalībnieki piekrīt revanšam, jaunā kārta sākas automātiski.
+Ja kāds izvēlas **Galvenā izvēlne** vai **Iziet**, pārējie atgriežas kopīgā jaunā
+istabā (lobby). Tur var uzaicināt citus vai sākt spēli ar atlikušo sastāvu;
+viens palicis spēlētājs var uzaicināt draugu vai spēlēt pret botu. Istabas režīms,
+laika limits un viesu atļauja saglabājas; iepriekšējās partijas rezultāti paliek
+iepriekšējā spēles ierakstā. Kamēr kāds vēl nav atbildējis, revanša balsojums gaida.
+
+
 Poga **Izveidot istabu** sāk servera pieprasījumu uzreiz un rāda **Veido istabu…**.
 Istabas lapa atveras ar servera apstiprinātu dalībnieku sarakstu un iestatījumiem.
 Izveides, ātrās pievienošanās un pievienošanās pēc koda atbilde tiek vienreiz nodota
