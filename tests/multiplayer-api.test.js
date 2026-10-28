@@ -322,6 +322,7 @@ test("timeout maintenance finishes a disconnected game and saves the loser", asy
   const state = structuredClone(room.gameState);
   state.updatedAt = Date.now() - 700000;
   const loser = state.phase === "defend" ? state.defender : state.attacker;
+  state.players.find((p) => p.id === loser).movesMade = 1;
   await db.match.update({ where: { id: room.id }, data: { gameState: state } });
   await app.locals.matches.expire();
   const ended = await app.locals.matches.load("TESTROOM");
@@ -409,7 +410,7 @@ test.each(["committed change", "server restart"])(
     const room = await service.load("TESTROOM");
     const game = structuredClone(room.gameState);
     game.updatedAt = Date.now();
-    for (const p of game.players) p.remainingMs = 50;
+    for (const p of game.players) { p.remainingMs = 50; p.movesMade = 1; }
     const updated = await db.match.update({
       where: { id: room.id },
       data: { gameState: game, version: { increment: 1 } },
@@ -596,10 +597,10 @@ test("server rejects early and non-neighbour throw-ins, including stale rebased 
   await expect(service.action("TESTROOM", identities[2], { type: "attack", cardId: "c", bout: 0 }, room.version)).rejects.toThrow();
   await expect(service.action("TESTROOM", identities[3], { type: "attack", cardId: "d", bout: 0 }, room.version)).rejects.toThrow();
   room = await service.action("TESTROOM", identities[0], { type: "finish", bout: 0 }, room.version);
-  await expect(service.action("TESTROOM", identities[0], { type: "attack", cardId: "b", bout: 0 }, previousVersion)).rejects.toThrow();
+  room = await service.action("TESTROOM", identities[0], { type: "attack", cardId: "b", bout: 0 }, previousVersion);
   room = await service.action("TESTROOM", identities[2], { type: "attack", cardId: "c", bout: 0 }, room.version);
-  expect(room.gameState.attacks.map((c) => c.id)).toEqual(["a", "c"]);
-  expect(room.gameState.finishedAttackers).toEqual([ids[0]]);
+  expect(room.gameState.attacks.map((c) => c.id)).toEqual(["a", "b", "c"]);
+  expect(room.gameState.finishedAttackers).toEqual([]);
   await expect(service.action("TESTROOM", identities[3], { type: "finish", bout: 0 }, room.version)).rejects.toThrow();
 });
 
@@ -610,6 +611,7 @@ test("a three-player timeout stays active and records the loss through final com
   let room = await service.load("TESTROOM");
   const state = structuredClone(room.gameState);
   const expiredId = state.attacker;
+  state.players.find((p) => p.id === expiredId).movesMade = 1;
   state.updatedAt = Date.now() - 700000;
   await db.match.update({ where: { id: room.id }, data: { gameState: state } });
   await service.expire();
@@ -855,4 +857,79 @@ test("failed lobby persistence rolls back departure and votes without broadcasti
   await expect(service.leave("TESTROOM", who)).rejects.toThrow("Lobby creation failed");
   expect(await service.load("TESTROOM")).toEqual(before);
   expect(broadcasts).toBe(0);
+});
+
+
+test.each(["connected", "disconnected", "restarted"])("a full table waits for both confirmations with clients %s", async (connectionState) => {
+  const members = await setupMany(3);
+  const service = app.locals.matches;
+  let room = await service.load("TESTROOM");
+  const game = structuredClone(room.gameState);
+  game.attacker = game.players[0].id;
+  game.defender = game.players[1].id;
+  game.attacks = [{ id: "pause-a", rank: 6, suit: "clubs" }, { id: "pause-b", rank: 6, suit: "hearts" }];
+  game.defenses = [null, null];
+  game.limit = 2;
+  game.phase = "defend";
+  game.updatedAt = Date.now();
+  await db.match.update({ where: { id: room.id }, data: { gameState: game } });
+  let pushed;
+  if (connectionState === "connected") {
+    const peer = await connect(members[0].cookie);
+    await join(peer);
+    pushed = new Promise((resolve) => {
+      const listener = (state) => {
+        if (state.bout !== 1) return;
+        peer.off("game:state", listener);
+        resolve(state);
+      };
+      peer.on("game:state", listener);
+    });
+  }
+  const who = await service.identity({ headers: { cookie: members[1].cookie } });
+  room = await service.action("TESTROOM", who, { type: "take", bout: 0 }, room.version);
+  expect(room.gameState.settleAt).toBeNull();
+  expect(room.gameState.attacks).toHaveLength(2);
+  expect((await service.expireRoom("TESTROOM")).version).toBe(room.version);
+  if (connectionState === "restarted") {
+    rt.cleanup();
+    await new Promise((resolve) => rt.io.close(resolve));
+    server = createServer(app);
+    rt = attachRealtime(server, service, { tickMs: 60000 });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 2200));
+  expect((await service.load("TESTROOM")).gameState.bout).toBe(0);
+  const first = await service.identity({ headers: { cookie: members[0].cookie } });
+  const second = await service.identity({ headers: { cookie: members[2].cookie } });
+  room = await service.action("TESTROOM", first, { type: "finish", bout: 0 }, room.version);
+  expect(room.gameState.bout).toBe(0);
+  const settled = await service.action("TESTROOM", second, { type: "finish", bout: 0 }, room.version);
+  expect(settled.gameState.bout).toBe(1);
+  expect(settled.gameState.attacks).toEqual([]);
+  if (pushed) expect((await pushed).attacks).toEqual([]);
+});
+
+test("both unlocked neighbours can submit concurrent throw-ins; stale approvals cannot finish a changed table", async () => {
+  const members = await setupMany(3);
+  const service = app.locals.matches;
+  const identities = await Promise.all(members.map((m) => service.identity({ headers: { cookie: m.cookie } })));
+  let room = await service.load("TESTROOM");
+  const g = structuredClone(room.gameState);
+  g.attacker = g.players[0].id;
+  g.defender = g.players[1].id;
+  g.players[0].hand = [{ id: "a", rank: 6, suit: "clubs" }, { id: "b", rank: 6, suit: "hearts" }];
+  g.players[2].hand = [{ id: "c", rank: 6, suit: "diamonds" }];
+  await db.match.update({ where: { id: room.id }, data: { gameState: g } });
+  room = await service.action("TESTROOM", identities[0], { type: "attack", cardId: "a", bout: 0 }, room.version);
+  room = await service.action("TESTROOM", identities[0], { type: "finish", bout: 0 }, room.version);
+  const version = room.version;
+  await Promise.all([
+    service.action("TESTROOM", identities[0], { type: "attack", cardId: "b", bout: 0 }, version),
+    service.action("TESTROOM", identities[2], { type: "attack", cardId: "c", bout: 0 }, version),
+  ]);
+  room = await service.load("TESTROOM");
+  expect(room.gameState.attacks.map((c) => c.id).sort()).toEqual(["a", "b", "c"]);
+  expect(room.gameState.finishedAttackers).toEqual([]);
+  await expect(service.action("TESTROOM", identities[0], { type: "finish", bout: 0 }, version)).rejects.toThrow();
 });

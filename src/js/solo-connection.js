@@ -77,7 +77,8 @@ export function createSoloConnection(
   };
   const schedule = () => {
     clearTimeout(botTimer);
-    if (!connection.connected || game.result || !chooseBotMove(game)) return;
+    if (!connection.connected || game.result) return;
+    if (!chooseBotMove(game)) return;
     botTimer = setTimeout(() => {
       const move = chooseBotMove(game);
       if (move) {
@@ -127,7 +128,7 @@ export function createSoloConnection(
         if (!game.result && advanceClock(game)) {
           version++;
           publish();
-          clearTimeout(botTimer);
+          schedule();
         }
       }, 250);
     },

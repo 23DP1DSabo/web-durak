@@ -51,6 +51,7 @@ test("rejects another player's turn, forged card and unsupported action without 
 test("server clock expires even without client actions and survives serialized state", () => {
   const g = createMultiplayer(seats(2), "classic", 60, 1000, rng());
   const loser = actor(g);
+  g.players.find((p) => p.id === loser).movesMade = 1;
   const restored = JSON.parse(JSON.stringify(g));
   expect(advanceClock(restored, 61000)).toBe(true);
   expect(restored.result).toMatchObject({ loser, reason: "timeout" });
@@ -91,7 +92,7 @@ test("complete 2-, 3- and 6-player matches conserve cards and rotate seats", () 
               : l.attack.length
                 ? { type: "attack", cardId: l.attack[0] }
                 : { type: "finish" };
-        g = applyMove(g, id, move, 0);
+        g = applyMove(g, id, move, g.updatedAt);
         expect(cards(g)).toHaveLength(36);
         expect(new Set(cards(g).map((c) => c.id)).size).toBe(36);
       }
@@ -124,7 +125,7 @@ function scenario(n = 2, mode = "classic") {
   ];
   return g;
 }
-const play = (g, id, move) => applyMove(g, id, move, 0);
+const play = (g, id, move) => applyMove(g, id, move, g.updatedAt);
 
 test("attacker can lay several cards atomically and add cards while defense is pending", () => {
   let g = scenario();
@@ -206,6 +207,10 @@ test("taking waits for throw-ins and confirmation, retains cards until then and 
   });
   expect(g.attacks).toHaveLength(6);
   expect(legalMoves(g, "1").attack).toEqual([]);
+  expect(g.settleAt).toBeNull();
+  expect(legalMoves(g, "1").finish).toBe(true);
+  expect(advanceClock(g, 5000)).toBe(false);
+  expect(g.attacks).toHaveLength(6);
   g = play(g, "1", { type: "finish" });
   expect(g.players[1].hand).toHaveLength(count + 7);
   expect(g.attacks).toEqual([]);
@@ -213,7 +218,7 @@ test("taking waits for throw-ins and confirmation, retains cards until then and 
   expect(g.bout).toBe(1);
 });
 
-test("the next neighbour throws in after the attacker finishes without reopening that attacker", () => {
+test("both neighbours can keep throwing after the primary attacker opens participation", () => {
   let g = scenario(3);
   g.players[2].hand = [card(6, "spades"), card(10)];
   g = play(g, "1", { type: "attack", cardId: "6-clubs" });
@@ -221,9 +226,11 @@ test("the next neighbour throws in after the attacker finishes without reopening
   g = play(g, "1", { type: "finish" });
   expect(g.phase).toBe("taking");
   g = play(g, "3", { type: "attack", cardId: "6-spades" });
-  expect(g.finishedAttackers).toEqual(["1"]);
-  expect(legalMoves(g, "1").attack).toEqual([]);
+  expect(g.finishedAttackers).toEqual([]);
+  expect(legalMoves(g, "1").attack).toContain("6-hearts");
   g = play(g, "3", { type: "finish" });
+  expect(g.bout).toBe(0);
+  g = play(g, "1", { type: "finish" });
   expect(g.phase).toBe("attack");
   expect(g.attacker).toBe("3");
 });
@@ -248,6 +255,7 @@ test("restored taking state keeps confirmations and times the remaining attacker
   let g = play(scenario(3), "1", { type: "attack", cardId: "6-clubs" });
   g = play(g, "2", { type: "take" });
   g = play(g, "1", { type: "finish" });
+  g.players[2].movesMade = 1;
   const restored = JSON.parse(JSON.stringify(g));
   expect(actor(restored)).toBe("3");
   expect(advanceClock(restored, 600001)).toBe(true);
@@ -269,7 +277,7 @@ test.each([3, 4, 5, 6])("only adjacent players can throw in, attacker first (%i 
   g = play(g, "1", { type: "finish" });
   expect(g.phase).toBe("defend");
   expect(legalMoves(g, "3").attack).toEqual(["6-spades"]);
-  expect(legalMoves(g, "1").attack).toEqual([]);
+  expect(legalMoves(g, "1").attack).toContain("6-hearts");
   if (n > 3) {
     expect(legalMoves(g, "4").attack).toEqual([]);
     expect(legalMoves(g, "4").finish).toBe(false);
@@ -277,21 +285,26 @@ test.each([3, 4, 5, 6])("only adjacent players can throw in, attacker first (%i 
   }
   g = play(g, "3", { type: "attack", cardId: "6-spades" });
   g = play(g, "2", { type: "take" });
-  expect(g.finishedAttackers).toEqual(["1"]);
+  expect(g.finishedAttackers).toEqual([]);
   g = play(g, "3", { type: "finish" });
+  g = play(g, "1", { type: "finish" });
   expect(g.bout).toBe(1);
   expect(g.attacker).toBe("3");
   expect(g.defender).toBe(n === 3 ? "1" : "4");
 });
 
-test("both neighbours can finish while defense is pending; last defense rotates the turn", () => {
+test("after defense both neighbours must confirm the current table", () => {
   let g = scenario(4);
   g = play(g, "1", { type: "attack", cardId: "6-clubs" });
   g = play(g, "1", { type: "finish" });
-  g = play(g, "3", { type: "finish" });
+  expect(legalMoves(g, "3").finish).toBe(false);
   expect(g.bout).toBe(0);
   expect(actor(g)).toBe("2");
   g = play(g, "2", { type: "defend", cardId: "7-spades", targetId: "6-clubs" });
+  expect(legalMoves(g, "1").finish).toBe(true);
+  expect(legalMoves(g, "3").finish).toBe(true);
+  g = play(g, "3", { type: "finish" });
+  g = play(g, "1", { type: "finish" });
   expect(g.bout).toBe(1);
   expect(g.attacker).toBe("2");
   expect(g.defender).toBe("3");
@@ -395,6 +408,7 @@ test.each(["attack", "defend", "taking"])("timeout during %s removes only that p
   if (phase !== "attack") g = play(g, "1", { type: "attack", cardId: g.players[0].hand[0].id });
   if (phase === "taking") g = play(g, "2", { type: "take" });
   const expired = actor(g);
+  g.players.find((p) => p.id === expired).movesMade = 1;
   expect(advanceClock(g, 600001)).toBe(true);
   expect(g.result).toBeNull();
   expect(g.players.find((p) => p.id === expired)).toMatchObject({ out: true, exitReason: "timeout", hand: [], remainingMs: 0 });
@@ -419,4 +433,108 @@ test("resignation charges elapsed time once before changing the active clock", (
   expect(g.updatedAt).toBe(10000);
   expect(advanceClock(g, 11000)).toBe(false);
   expect(g.players[0].remainingMs).toBe(589000);
+});
+
+
+test("new throw-ins reopen both approvals after defense or pickup, without closing participation", () => {
+  let g = scenario(3);
+  g.players[2].hand = [card(6, "spades"), card(7, "diamonds")];
+  g = play(g, "1", { type: "attack", cardId: "6-clubs" });
+  g = play(g, "1", { type: "finish" });
+  g = play(g, "2", { type: "defend", cardId: "7-spades", targetId: "6-clubs" });
+  g = play(g, "3", { type: "finish" });
+  expect(legalMoves(g, "3").finish).toBe(false);
+  expect(legalMoves(g, "3").attack).toContain("6-spades");
+  g = play(g, "1", { type: "attack", cardId: "6-hearts" });
+  expect(g.finishedAttackers).toEqual([]);
+  expect(g.throwInsOpen).toBe(true);
+  expect(legalMoves(g, "3").finish).toBe(false);
+  g = play(g, "2", { type: "defend", cardId: "7-hearts", targetId: "6-hearts" });
+  expect(legalMoves(g, "1").finish).toBe(true);
+  expect(legalMoves(g, "3").finish).toBe(true);
+  g = play(g, "1", { type: "finish" });
+  g = play(g, "3", { type: "attack", cardId: "7-diamonds" });
+  g = play(g, "2", { type: "take" });
+  expect(g.finishedAttackers).toEqual([]);
+  g = play(g, "3", { type: "finish" });
+  expect(g.bout).toBe(0);
+  g = play(g, "1", { type: "finish" });
+  expect(g.bout).toBe(1);
+  expect(g.throwInsOpen).toBe(false);
+});
+
+test.each([2, 3, 6])("limit waits for all attacker approvals with %i players", (n) => {
+  for (const limit of [2, 6]) for (const taking of [false, true]) {
+    let g = scenario(n);
+    g.limit = limit;
+    g.phase = "defend";
+    g.attacks = [card(6), card(6, "hearts"), card(6, "diamonds"), card(6, "spades"), card(7), card(7, "diamonds")].slice(0, limit);
+    g.defenses = Array(limit).fill(null);
+    g.players[1].hand = [8, 9, 10, 11, 12, 13].map((rank) => card(rank, "spades")).slice(0, limit);
+    if (taking) g = applyMove(g, "2", { type: "take" }, 100);
+    else {
+      for (let i = 0; i < limit; i++) {
+        expect(g.settleAt).toBeNull();
+        g = applyMove(g, "2", { type: "defend", cardId: `${8+i}-spades`, targetId: g.attacks[i].id }, 100);
+      }
+    }
+    expect(g.settleAt).toBeNull();
+    expect(g.attacks).toHaveLength(limit);
+    expect(legalMoves(g, "1").finish).toBe(true);
+    expect(legalMoves(g, "2").finish).toBe(false);
+    if (n > 2) expect(legalMoves(g, "3").finish).toBe(true);
+    let restored = JSON.parse(JSON.stringify(g));
+    expect(advanceClock(restored, 10100)).toBe(false);
+    expect(restored.attacks).toHaveLength(limit);
+    restored = play(restored, "1", { type: "finish" });
+    if (n > 2) {
+      expect(restored.bout).toBe(0);
+      expect(restored.attacks).toHaveLength(limit);
+      expect(legalMoves(restored, "1").finish).toBe(false);
+      restored = play(restored, "3", { type: "finish" });
+    }
+    expect(restored.bout).toBe(1);
+    expect(restored.attacks).toEqual([]);
+    expect(restored.settleAt).toBeNull();
+  }
+});
+
+test("attack capacity is fixed at the defender's starting hand, not their remaining hand", () => {
+  let g = scenario(3);
+  g.players[1].hand = [card(7, "spades"), card(8, "spades")];
+  g = play(g, "1", { type: "attack", cardId: "6-clubs" });
+  g = play(g, "2", { type: "defend", cardId: "7-spades", targetId: "6-clubs" });
+  expect(g.limit).toBe(2);
+  expect(g.settleAt).toBeNull();
+  g = play(g, "1", { type: "attack", cardId: "6-hearts" });
+  g = play(g, "2", { type: "defend", cardId: "8-spades", targetId: "6-hearts" });
+  expect(g.limit).toBe(2);
+  expect(g.settleAt).toBeNull();
+  expect(legalMoves(g, "1").finish).toBe(true);
+  expect(legalMoves(g, "3").finish).toBe(true);
+});
+
+test("an untouched player's clock still expires as inactivity", () => {
+  const g = createMultiplayer(seats(2), "classic", 60, 0, rng());
+  expect(advanceClock(g, 60000)).toBe(true);
+  expect(g.result.reason).toBe("inactive");
+});
+
+
+test("a stored automatic pause becomes manual confirmation without losing the table", () => {
+  let g = play(scenario(3), "1", { type: "attack", cardId: "6-clubs" });
+  g = play(g, "2", { type: "take" });
+  g.settleAt = 2000;
+  const before = g.attacks;
+  const restored = JSON.parse(JSON.stringify(g));
+  expect(advanceClock(restored, 1000000)).toBe(true);
+  expect(restored.settleAt).toBeNull();
+  expect(restored.attacks).toEqual(before);
+  expect(restored.result).toBeNull();
+  expect(restored.bout).toBe(0);
+  expect(legalMoves(restored, "1").finish).toBe(true);
+  expect(legalMoves(restored, "3").finish).toBe(true);
+  const clicked = applyMove(g, "1", { type: "finish" }, 1000000);
+  expect(clicked.finishedAttackers).toEqual(["1"]);
+  expect(clicked.bout).toBe(0);
 });

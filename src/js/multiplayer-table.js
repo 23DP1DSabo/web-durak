@@ -236,7 +236,7 @@ export function startTable({ connection: localConnection = null } = {}) {
             : state.legal.attack.length
               ? "Velc kārtis uz brīvo vietu. Vari piemest arī aizsardzības laikā."
               : state.legal.finish
-                ? "Vari pabeigt savu uzbrukumu un dot kārtu nākamajam."
+                ? "Vari apstiprināt piemešanas beigas. Pēc jaunas kārts jāapstiprina vēlreiz."
                 : `Gaidi: ${turn?.name || "pārējos spēlētājus"}.`;
     opponents.replaceChildren();
     for (const p of state.players.filter((p) => p.id !== state.selfId)) {
@@ -383,10 +383,9 @@ export function startTable({ connection: localConnection = null } = {}) {
     $("#finish-attack").hidden = !state.legal.finish;
     $("#finish-attack").disabled = busy || !connected || !state.legal.finish;
     $("#finish-attack").textContent =
-      state.selfId === state.attacker && state.attackers?.length > 1
-        ? "Beigt uzbrukumu"
-        : state.phase === "taking" || state.phase === "defend"
-          ? "Beigt piemest" : "Kauts · beigt izspēli";
+      state.selfId === state.attacker && state.attackers?.length > 1 && !state.throwInsOpen
+        ? "Beigt uzbrukt"
+        : "Beigt piemest";
     updateClocks();
     if (state.result) {
       $("#game-result-title").textContent = resultMessage();

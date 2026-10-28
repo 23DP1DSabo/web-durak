@@ -61,6 +61,17 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projektā
 
 ## Multiplayer (2–6 spēlētāji)
 
+Spēlē ar 3+ dalībniekiem sākumā piemet tikai galvenais uzbrucējs. **Beigt uzbrukt**
+atļauj piemest arī otram aizsarga kaimiņam; pirmais uzbrucējs saglabā piemešanas
+tiesības. Pēc katras jaunas kārts iepriekšējie apstiprinājumi tiek atcelti. Kad
+kārtis nokautas vai aizsargs izvēlējies paņemt, abi uzbrucēji apstiprina **Beigt piemest**.
+Arī sasniedzot limitu (6 kārtis vai aizsarga kāršu skaits izspēles sākumā), pēc
+aizsardzības vai paņemšanas izvēles abiem uzbrucējiem jānospiež **Beigt piemest**.
+Kārtis paliek uz galda līdz abu apstiprinājumam; automātiskas pauzes un pārejas nav.
+Divu spēlētāju spēlē apstiprina vienīgais uzbrucējs. Spēlē pret botu bots apstiprina
+savu piemešanas beigšanu pats.
+
+
 Pēc partijas beigām **Turpināt nākamo kārtu** atzīmē gatavību spēlēt vēlreiz.
 Ja visi dalībnieki piekrīt revanšam, jaunā kārta sākas automātiski.
 Ja kāds izvēlas **Galvenā izvēlne** vai **Iziet**, pārējie atgriežas kopīgā jaunā
