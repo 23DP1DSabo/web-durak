@@ -710,6 +710,10 @@ body {
     cursor: pointer;
 }
 
+.time-limit-options .no-time-limit-option {
+    grid-column: 1 / -1;
+}
+
 .time-limit-options input {
     position: absolute;
     width: 1px;
@@ -877,6 +881,56 @@ body {
         linear-gradient(rgb(5 30 19 / 35%), rgb(5 30 19 / 35%)),
         url("../images/game-table-background-low-res-tho.jpg") center / cover fixed no-repeat;
     font-family: Georgia, "Palatino Linotype", serif;
+}
+
+.clean-panels-page {
+    background:
+        linear-gradient(rgb(5 30 19 / 28%), rgb(5 30 19 / 28%)),
+        url("../images/game-table-background-low-res-tho.jpg") center / cover fixed no-repeat;
+}
+
+.clean-panels-page #auth-panel {
+    border: 3px solid #2b190f;
+    border-radius: 0;
+    outline: 1px solid var(--wood-light);
+    outline-offset: -9px;
+    color: var(--paper-light);
+    background:
+        linear-gradient(rgb(0 0 0 / 12%), rgb(0 0 0 / 12%)),
+        url("../images/long-wood.jpg") center / cover;
+    box-shadow: 0 18px 48px rgb(0 0 0 / 32%);
+    clip-path: polygon(0 12px, 12px 0, calc(100% - 16px) 0, 100% 15px, 100% calc(100% - 10px), calc(100% - 12px) 100%, 14px 100%, 0 calc(100% - 15px));
+}
+
+.clean-panels-page #auth-panel .settings-section,
+.clean-panels-page #auth-panel .placeholder-section,
+.clean-panels-page #auth-panel .rules-section {
+    border: 1px solid rgb(232 216 173 / 35%);
+    border-radius: 0;
+    background: rgb(0 0 0 / 50%);
+    box-shadow: inset 0 0 18px rgb(20 10 5 / 24%);
+}
+
+.clean-panels-page #auth-panel .auth-header h1,
+.clean-panels-page #auth-panel > h2,
+.clean-panels-page #account > h2,
+.clean-panels-page #account > p,
+.clean-panels-page #auth-panel > #settings-status,
+.clean-panels-page #auth-panel > #friends-page-message {
+    color: var(--paper-light);
+    text-shadow: none;
+}
+
+.clean-panels-page #auth-panel .rules-section h3,
+.clean-panels-page #auth-panel .settings-section h3,
+.clean-panels-page #auth-panel .placeholder-section h3,
+.clean-panels-page #auth-panel .rules-section h4,
+.clean-panels-page #auth-panel .rules-section p,
+.clean-panels-page #auth-panel .rules-section li,
+.clean-panels-page #auth-panel .settings-section p,
+.clean-panels-page #auth-panel .auth-field label,
+.clean-panels-page #auth-panel .theme-options legend {
+    color: var(--paper-light);
 }
 
 #auth-panel {
@@ -1292,6 +1346,17 @@ body {
     isolation: isolate;
 }
 
+.play-surface #game-status {
+    max-width: 100%;
+    padding: 8px 16px;
+    border: 1px solid rgb(232 216 173 / 28%);
+    border-radius: 999px;
+    color: #fff0cf;
+    background: rgb(8 34 23 / 76%);
+    font: 700 14px/1.3 "Trebuchet MS", sans-serif;
+    text-align: center;
+}
+
 .opponent-seat {
     grid-row: 1;
     grid-template-rows: auto auto;
@@ -1319,8 +1384,6 @@ body {
 .player-clock {
     box-sizing: border-box;
     display: flex;
-    grid-column: 2;
-    grid-row: 4;
     align-items: center;
     justify-content: center;
     gap: 10px;
@@ -1332,6 +1395,10 @@ body {
     background: linear-gradient(rgb(23 10 3 / 43%), rgb(23 10 3 / 43%)), url("../images/long-wood.jpg") center / cover;
     box-shadow: 0 4px 10px rgb(0 0 0 / 35%), inset 0 0 0 1px rgb(242 207 141 / 35%);
     font: 600 12px/1.2 "Trebuchet MS", sans-serif;
+}
+
+.game-table-page .player-clock[hidden] {
+    display: none;
 }
 
 .opponent-seat .opponent-clock {
@@ -2347,6 +2414,18 @@ body.game-table-page[data-theme="light"] .table-status {
     text-shadow: none;
 }
 
+body.game-table-page[data-theme="light"] .play-surface #game-status {
+    border-color: #a6b6a1;
+    color: #263d2e;
+    background: rgb(248 250 245 / 92%);
+}
+
+body.game-table-page[data-theme="light"] .player-status-bar #game-status {
+    border-color: #a6b6a1;
+    color: #263d2e;
+    background: rgb(248 250 245 / 92%);
+}
+
 body.game-table-page[data-theme="light"] .game-exit-link,
 body.game-table-page[data-theme="light"] .player-clock,
 body.game-table-page[data-theme="light"] .game-actions button {
@@ -2382,6 +2461,13 @@ body.game-table-page[data-theme="dark"] .player-clock,
 body.game-table-page[data-theme="dark"] .player-clock time {
     color: #e4e9e5;
     text-shadow: none;
+}
+
+body.game-table-page[data-theme="dark"] .play-surface #game-status,
+body.game-table-page[data-theme="dark"] .player-status-bar #game-status {
+    border-color: #46525a;
+    color: #e4e9e5;
+    background: rgb(32 40 46 / 92%);
 }
 
 body.game-table-page[data-theme="dark"] .game-exit-link,
@@ -2480,6 +2566,13 @@ body.auth-page[data-theme="dark"] .theme-options input:checked + span {
     box-shadow: inset 0 0 0 2px rgb(209 184 120 / 20%);
 }
 
+@media (max-width: 700px) {
+    .drag-table .player-seat {
+        grid-template-columns: minmax(106px, 0.8fr) minmax(0, 1.6fr);
+        justify-items: stretch;
+    }
+}
+
 body[data-theme="dark"] .room-dialog {
     border-color: #46525a;
     outline-color: #303a40;
@@ -2532,6 +2625,63 @@ body[data-theme="dark"] .room-dialog .room-code {
     background: #182126;
 }
 
+body.clean-panels-page[data-theme="light"] #auth-panel {
+    border-color: #2b190f;
+    color: var(--paper-light);
+    background:
+        linear-gradient(rgb(0 0 0 / 12%), rgb(0 0 0 / 12%)),
+        url("../images/long-wood.jpg") center / cover;
+}
+
+body.clean-panels-page[data-theme="light"],
+body.clean-panels-page[data-theme="dark"] {
+    background:
+        linear-gradient(rgb(5 30 19 / 28%), rgb(5 30 19 / 28%)),
+        url("../images/game-table-background-low-res-tho.jpg") center / cover no-repeat;
+}
+
+body.clean-panels-page[data-theme="light"] #auth-panel .settings-section,
+body.clean-panels-page[data-theme="light"] #auth-panel .placeholder-section,
+body.clean-panels-page[data-theme="light"] #auth-panel .rules-section {
+    border-color: rgb(232 216 173 / 35%);
+    color: var(--paper-light);
+    background: rgb(0 0 0 / 50%);
+}
+
+body.clean-panels-page[data-theme="dark"] #auth-panel {
+    border-color: #2b190f;
+    color: var(--paper-light);
+    background:
+        linear-gradient(rgb(0 0 0 / 12%), rgb(0 0 0 / 12%)),
+        url("../images/long-wood.jpg") center / cover;
+}
+
+body.clean-panels-page[data-theme="dark"] #auth-panel .settings-section,
+body.clean-panels-page[data-theme="dark"] #auth-panel .placeholder-section,
+body.clean-panels-page[data-theme="dark"] #auth-panel .rules-section {
+    border-color: rgb(232 216 173 / 35%);
+    color: var(--paper-light);
+    background: rgb(0 0 0 / 50%);
+}
+
+body.clean-panels-page[data-theme="dark"] #auth-panel .auth-header h1,
+body.clean-panels-page[data-theme="dark"] #auth-panel > h2,
+body.clean-panels-page[data-theme="dark"] #account > h2,
+body.clean-panels-page[data-theme="dark"] #account > p,
+body.clean-panels-page[data-theme="dark"] #auth-panel > #settings-status,
+body.clean-panels-page[data-theme="dark"] #auth-panel > #friends-page-message,
+body.clean-panels-page[data-theme="dark"] #auth-panel .rules-section h3,
+body.clean-panels-page[data-theme="dark"] #auth-panel .settings-section h3,
+body.clean-panels-page[data-theme="dark"] #auth-panel .placeholder-section h3,
+body.clean-panels-page[data-theme="dark"] #auth-panel .rules-section h4,
+body.clean-panels-page[data-theme="dark"] #auth-panel .rules-section p,
+body.clean-panels-page[data-theme="dark"] #auth-panel .rules-section li,
+body.clean-panels-page[data-theme="dark"] #auth-panel .settings-section p,
+body.clean-panels-page[data-theme="dark"] #auth-panel .auth-field label,
+body.clean-panels-page[data-theme="dark"] #auth-panel .theme-options legend {
+    color: var(--paper-light);
+}
+
 /* Shared game table: other seats never receive hidden card values. */
 .multiplayer-opponents { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; width: min(96%, 1000px); }
 .multiplayer-seat { min-width: 125px; max-width: 200px; padding: 10px; border: 2px solid transparent; border-radius: 12px; background: rgba(0,0,0,.65); color: white; text-align: center; }
@@ -2541,6 +2691,71 @@ body[data-theme="dark"] .room-dialog .room-code {
 .multiplayer-card-backs { display: flex; justify-content: center; margin: 6px 0 0; }
 .multiplayer-card-backs .card-back { width: 22px; height: 32px; margin-left: -5px; }
 .multiplayer-connection { font-size: .85rem; margin: 0; }
+.multiplayer-connection { color: #ffe8c2; }
+.player-status-bar {
+    grid-column: 2;
+    grid-row: 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.player-status-bar #game-status {
+    max-width: min(100%, 430px);
+    padding: 8px 16px;
+    border: 1px solid rgb(232 216 173 / 28%);
+    border-radius: 999px;
+    color: #fff0cf;
+    background: rgb(8 34 23 / 76%);
+    font: 700 14px/1.3 "Trebuchet MS", sans-serif;
+    text-align: center;
+}
+
+.drag-table .player-seat {
+    position: relative;
+    display: block;
+    min-width: 0;
+}
+
+.drag-table .player-seat .seat-identity {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 0;
+    width: min(210px, 22%);
+    transform: translateY(-50%);
+}
+
+.drag-table .player-seat .player-hand {
+    width: 100%;
+    min-height: clamp(100px, 13vw, 150px);
+    justify-content: center;
+}
+
+@media (max-width: 700px) {
+    .player-status-bar {
+        grid-column: 1;
+        grid-row: 5;
+    }
+
+    .drag-table .player-seat {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 4px;
+    }
+
+    .drag-table .player-seat .seat-identity {
+        position: static;
+        width: auto;
+        transform: none;
+    }
+
+    .drag-table .player-seat .player-hand {
+        min-height: 100px;
+    }
+}
 .game-table-page:has(.multiplayer-opponents) .table-stage { min-height: 850px; }
 @media(max-width:600px) {
   .multiplayer-seat { min-width: 90px; padding: 5px; }
@@ -2566,7 +2781,7 @@ body[data-theme="dark"] .room-dialog .room-code {
 }
 
 .game-table-page.drag-table:has(.multiplayer-opponents) .table-stage { min-height: calc(100svh - 80px); }
-.drag-table .player-seat { grid-template-columns: 1fr; gap: 4px; justify-items: center; }
+.drag-table .player-seat { gap: 8px; }
 .drag-table .player-hand { flex-wrap: wrap; overflow: visible; justify-content: center; gap: 5px; }
 .drag-table .player-hand .hand-card + .hand-card { margin-left: 0; }
 .drag-table .player-hand .hand-card { touch-action: none; }

@@ -41,7 +41,9 @@ function renderSettings() {
     input.disabled = !isHost || (room && room.status !== "waiting");
   }
   if (settings.timeLimitSeconds !== undefined) {
-    timeLimitStatus.textContent = `Katram spēlētājam: ${settings.timeLimitSeconds / 60} min`;
+    timeLimitStatus.textContent = settings.timeLimitSeconds === 0
+      ? "Bez laika limita"
+      : `Katram spēlētājam: ${settings.timeLimitSeconds / 60} min`;
   }
   if (settings.allowGuests !== undefined) {
     allowGuestsInput.checked = settings.allowGuests;

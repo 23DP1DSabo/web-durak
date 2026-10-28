@@ -11,6 +11,7 @@ import {
   playAttack,
   playDefense,
   resolveExchange,
+  sortHand,
   takeAttack,
 } from "./game-logic.js";
 import winnerCrown from "../images/crown_winner.png";
@@ -62,7 +63,7 @@ const mode = roomState?.mode ?? parameters.get("mode") ?? "classic";
 const playerName = parameters.get("name") ?? "Spēlētājs";
 const role = parameters.get("role") ?? "player";
 const timeLimit = String(roomState?.timeLimitSeconds ?? parameters.get("timeLimit") ?? "600");
-const validTimeLimits = new Set(["60", "180", "300", "600"]);
+const validTimeLimits = new Set(["0", "60", "180", "300", "600"]);
 const playerHand = document.querySelector("#player-hand");
 const opponentHand = document.querySelector("#opponent-hand");
 const playButton = document.querySelector("#play-card");
@@ -99,7 +100,8 @@ function cardDescription(card) {
 
 function renderHand(container, cards, owner, activeCards, passCards = []) {
   container.replaceChildren();
-  for (const card of cards) {
+  const orderedCards = owner === "player" ? sortHand(cards, game.trumpSuit) : cards;
+  for (const card of orderedCards) {
     if (owner === "bot") {
       const back = document.createElement("span");
       back.className = "card-back";
@@ -129,12 +131,12 @@ function renderHand(container, cards, owner, activeCards, passCards = []) {
 
 function currentStatus() {
   if (game.result) return game.result.message;
-  if (game.phase === "take-reveal") return game.defender === "bot" ? "Bots paņem kārti." : "Tu paņem kārti.";
-  if (passSelectionActive) return "Izvēlies kārti, ar kuru nodot uzbrukumu.";
+  if (game.phase === "take-reveal") return game.defender === "bot" ? "Pretinieks paņem kārtis" : "Paņem kārtis";
+  if (passSelectionActive) return "Izvēlies kārti";
   if (game.phase === "attack" || game.phase === "attack-more") {
-    return game.attacker === "player" ? "Tavs gājiens — izvēlies uzbrukuma kārti." : "Bots uzbrūk…";
+    return game.attacker === "player" ? "Tavs gājiens" : "Pretinieka gājiens";
   }
-  return game.defender === "player" ? "Aizsargājies vai paņem kārti." : "Bots izvēlas gājienu…";
+  return game.defender === "player" ? "Aizsargājies" : "Pretinieka gājiens";
 }
 
 function render() {
@@ -299,6 +301,7 @@ function pauseActiveClock() {
 }
 
 function syncTurnClock() {
+  if (Number(timeLimit) === 0) return;
   const nextActivePlayer = getActiveClockPlayer();
   if (activeClockPlayer !== nextActivePlayer) pauseActiveClock();
   if (!nextActivePlayer) {
@@ -430,7 +433,13 @@ if (!/^[A-Z0-9]{8}$/.test(roomCode) || !validTimeLimits.has(timeLimit)) {
 } else {
   document.querySelector("#match-mode").textContent = modeNames[mode] ?? "Spēle";
   document.querySelector("#match-code").textContent = roomCode;
-  document.querySelector("#match-time-limit").textContent = `${Number(timeLimit) / 60} min katram`;
+  document.querySelector("#match-time-limit").textContent = Number(timeLimit) === 0
+    ? "Bez laika limita"
+    : `${Number(timeLimit) / 60} min katram`;
+  if (Number(timeLimit) === 0) {
+    playerClock.hidden = true;
+    opponentClock.hidden = true;
+  }
   document.querySelector("#match-player-name").textContent = playerName;
   document.querySelector(".player-avatar").textContent = playerName.trim().charAt(0).toUpperCase() || "D";
   document.querySelector(".opponent-avatar").textContent = "B";

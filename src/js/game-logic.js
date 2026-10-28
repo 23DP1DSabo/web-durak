@@ -2,6 +2,15 @@ export const SUITS = ["clubs", "diamonds", "hearts", "spades"];
 export const RANKS = [6, 7, 8, 9, 10, 11, 12, 13, 14];
 export const HAND_SIZE = 6;
 
+export function sortHand(cards, trumpSuit) {
+  const suitOrder = new Map(SUITS.map((suit, index) => [suit, index]));
+  return [...cards].sort((first, second) =>
+    Number(first.suit === trumpSuit) - Number(second.suit === trumpSuit)
+    || first.rank - second.rank
+    || suitOrder.get(first.suit) - suitOrder.get(second.suit),
+  );
+}
+
 export function cardImageFilename(rank, suit) {
   const rankName = rank === 11
     ? "jack"

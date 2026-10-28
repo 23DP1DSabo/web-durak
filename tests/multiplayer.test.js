@@ -56,6 +56,13 @@ test("server clock expires even without client actions and survives serialized s
   expect(restored.result).toMatchObject({ loser, reason: "timeout" });
   expect(() => applyMove(restored, loser, { type: "attack" }, 62000)).toThrow();
 });
+test("games without a time limit never expire a player's turn", () => {
+  const game = createMultiplayer(seats(2), "classic", 0, 1000, rng());
+  expect(privateView(game, "1", 1, 1000).timed).toBe(false);
+  expect(advanceClock(game, 1000000000)).toBe(false);
+  expect(game.result).toBeNull();
+  expect(game.updatedAt).toBe(1000000000);
+});
 test("passing transfers defense to the next seat and checks that seat's capacity", () => {
   const g = createMultiplayer(seats(3), "passing", 60, 0, rng());
   g.attacker = "1";

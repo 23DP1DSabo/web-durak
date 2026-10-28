@@ -21,7 +21,6 @@
 
         <main class="table-stage" aria-label="Spēles galds">
             <div class="table-status">
-                <p id="game-status" role="status" aria-live="polite"></p>
                 <p class="trump-indicator">Trumpis <img id="trump-card" alt=""></p>
                 <div id="draw-pile" class="draw-pile" aria-label="Atlikušās kavas kārtis"></div>
                 <p id="draw-pile-count" class="draw-pile-count"></p>
@@ -62,10 +61,13 @@
                 </div>
                 <div id="player-hand" class="card-hand player-hand" aria-label="Tavas kārtis"></div>
             </section>
-            <aside id="player-clock" class="player-clock" aria-label="Tavs atlikušais gājiena laiks">
-                <span>Tavs laiks</span>
-                <time id="player-time">10:00</time>
-            </aside>
+            <div class="player-status-bar">
+                <aside id="player-clock" class="player-clock" aria-label="Tavs atlikušais gājiena laiks">
+                    <span>Tavs laiks</span>
+                    <time id="player-time">10:00</time>
+                </aside>
+                <p id="game-status" role="status" aria-live="polite"></p>
+            </div>
         </main>
         <dialog id="game-result-dialog" class="game-result-dialog" aria-labelledby="game-result-title">
             <img id="game-result-icon" class="game-result-icon" alt="" hidden>

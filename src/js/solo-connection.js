@@ -33,8 +33,8 @@ export function createSoloConnection(
     handlers = new Map();
   let game,
     version = 0,
-    botTimer,
-    clockTimer,
+    botTimer = null,
+    clockTimer = null,
     notified = false;
   try {
     const saved = JSON.parse(storage.getItem(key));
@@ -76,9 +76,15 @@ export function createSoloConnection(
     notifyResult();
   };
   const schedule = () => {
-    clearTimeout(botTimer);
-    if (!connection.connected || game.result || !chooseBotMove(game)) return;
+    if (
+      botTimer !== null
+      || !connection.connected
+      || game.result
+      || !chooseBotMove(game)
+    ) return;
     botTimer = setTimeout(() => {
+      botTimer = null;
+      if (!connection.connected || game.result) return;
       const move = chooseBotMove(game);
       if (move) {
         game = applyMove(game, "bot", move);
@@ -128,12 +134,16 @@ export function createSoloConnection(
           version++;
           publish();
           clearTimeout(botTimer);
+          botTimer = null;
+        } else {
+          schedule();
         }
       }, 250);
     },
     disconnect() {
       this.connected = false;
       clearTimeout(botTimer);
+      botTimer = null;
       clearInterval(clockTimer);
       save();
       emit("disconnect");

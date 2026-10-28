@@ -1,5 +1,6 @@
 import { io } from "socket.io-client";
 import { attachCardDrag, dropMove } from "./card-drag.js";
+import { sortHand } from "./game-logic.js";
 import winnerIcon from "../images/crown_winner.png";
 import loserIcon from "../images/jester_hat_loser.png";
 
@@ -48,7 +49,15 @@ export function startTable({ connection: localConnection = null } = {}) {
   const connection = document.createElement("p");
   connection.className = "multiplayer-connection";
   connection.setAttribute("role", "status");
-  $(".game-table-header").append(connection);
+  $(".match-details").append(connection);
+  const setConnectionMessage = (message) => {
+    connection.textContent = message;
+    connection.hidden = false;
+  };
+  const markConnected = () => {
+    connection.textContent = "Savienots";
+    connection.hidden = true;
+  };
 
   const resultActions = $(".game-result-actions");
 
@@ -97,8 +106,9 @@ export function startTable({ connection: localConnection = null } = {}) {
 
       accept(data.game);
     } catch (error) {
-      connection.textContent =
-        error.message || "Neizdevās pieteikties nākamajai kārtai.";
+      setConnectionMessage(
+        error.message || "Neizdevās pieteikties nākamajai kārtai.",
+      );
 
       if (socket.connected) await join();
     } finally {
@@ -122,7 +132,7 @@ export function startTable({ connection: localConnection = null } = {}) {
     if (state && game.version < state.version) return;
     clearTimeout(rejoinTimer);
     connected = true;
-    connection.textContent = "Savienots";
+    markConnected();
     const changed = !state || state.version !== game.version;
     state = game;
     receivedAt = performance.now();
@@ -152,11 +162,10 @@ export function startTable({ connection: localConnection = null } = {}) {
         throw Object.assign(new Error(data.error), { status: data.status });
       connected = true;
       accept(data.game);
-      connection.textContent = "Savienots";
+      markConnected();
     } catch (error) {
       connected = false;
-      connection.textContent =
-        error.message || "Neizdevās pievienoties spēlei.";
+      setConnectionMessage(error.message || "Neizdevās pievienoties spēlei.");
       if (socket.connected && ![401, 403, 404].includes(error.status)) {
         rejoinTimer = setTimeout(join, 2500);
       }
@@ -178,10 +187,11 @@ export function startTable({ connection: localConnection = null } = {}) {
         throw Object.assign(new Error(data.error), { status: data.status });
       selected = [];
       accept(data.game);
-      connection.textContent = "Savienots";
+      markConnected();
     } catch (error) {
-      connection.textContent =
-        error.message || "Savienojums pārtrūka. Galds tiks atjaunots.";
+      setConnectionMessage(
+        error.message || "Savienojums pārtrūka. Galds tiks atjaunots.",
+      );
       // Never replay a move after an ambiguous timeout; request the authoritative state.
       if (socket.connected) await join();
     } finally {
@@ -200,10 +210,18 @@ export function startTable({ connection: localConnection = null } = {}) {
     for (const id of buttons) $(id).disabled = true;
     if (!state) return;
     const self = state.players.find((p) => p.id === state.selfId);
-    const turn = state.players.find((p) => p.id === state.actor);
     $("#match-mode").textContent = modeNames[state.mode] || state.mode;
     $("#match-player-name").textContent = self.name;
     $(".player-avatar").textContent = self.name.charAt(0).toUpperCase();
+    $("#player-clock").hidden = !state.timed;
+    $("#opponent-clock").hidden = !state.timed;
+    if (!state.timed) {
+      $("#match-time-limit").textContent = "Bez laika limita";
+    } else if (localConnection) {
+      $("#match-time-limit").textContent = "Spēle pret botu";
+    } else {
+      $("#match-time-limit").textContent = "Multiplayer · 2–6 spēlētāji";
+    }
     $("#game-status").textContent = state.result
       ? resultMessage()
       : self.out
@@ -214,17 +232,15 @@ export function startTable({ connection: localConnection = null } = {}) {
             : "Tu esi izgājis. Gaidi partijas beigas."
         : state.phase === "taking"
           ? state.selfId === state.defender
-            ? "Tu ņemsi kārtis. Gaidi, kamēr pārējie pabeidz piemest."
+            ? "Paņem kārtis"
             : state.legal.attack.length || state.legal.finish
-              ? "Pretinieks ņems kārtis. Piemet vai pabeidz savu gājienu."
-              : `Gaidi, kamēr ${turn?.name || "uzbrucējs"} pabeidz piemest.`
+              ? "Tavs gājiens"
+              : "Pretinieka gājiens"
           : state.selfId === state.defender && state.attacks.length
-            ? "Velc kārti uz to uzbrukuma kārti, kuru vēlies nokaut."
-            : state.legal.attack.length
-              ? "Velc kārtis uz brīvo vietu. Vari piemest arī aizsardzības laikā."
-              : state.legal.finish
-                ? "Vari pabeigt savu uzbrukumu un dot kārtu nākamajam."
-                : `Gaidi: ${turn?.name || "pārējos spēlētājus"}.`;
+            ? "Aizsargājies"
+            : state.selfId === state.actor
+              ? "Tavs gājiens"
+              : "Pretinieka gājiens";
     opponents.replaceChildren();
     for (const p of state.players.filter((p) => p.id !== state.selfId)) {
       const seat = document.createElement("section");
@@ -244,6 +260,7 @@ export function startTable({ connection: localConnection = null } = {}) {
         : `${p.count} kārtis${p.id === state.attacker ? " · Uzbrūk" : p.id === state.defender ? " · Aizsargājas" : ""}`;
       const clock = document.createElement("time");
       clock.dataset.clock = p.id;
+      clock.hidden = !state.timed;
       const cards = document.createElement("div");
       cards.className = "multiplayer-card-backs";
       for (let i = 0; i < Math.min(6, p.count); i++) {
@@ -262,7 +279,7 @@ export function startTable({ connection: localConnection = null } = {}) {
       ...state.legal.defend,
       ...state.legal.pass,
     ]);
-    for (const card of state.hand) {
+    for (const card of sortHand(state.hand, state.trumpCard.suit)) {
       const button = document.createElement("button");
       button.className = "hand-card";
       button.type = "button";
@@ -446,7 +463,7 @@ export function startTable({ connection: localConnection = null } = {}) {
   function playDrop(ids, kind, targetId) {
     const action = dropMove(state, ids, kind, targetId);
     if (!action || busy || !connected) {
-      connection.textContent = "Šeit izvēlēto kārti nevar izspēlēt.";
+      setConnectionMessage("Šeit izvēlēto kārti nevar izspēlēt.");
       return;
     }
     void move(action.type, action.cardId, action);
@@ -471,7 +488,7 @@ export function startTable({ connection: localConnection = null } = {}) {
   $("#return-to-room").onclick = async (event) => {
     event.preventDefault();
     if (busy || !connected || !state) {
-      connection.textContent = "Pagaidi, līdz atjaunojas savienojums ar serveri.";
+      setConnectionMessage("Pagaidi, līdz atjaunojas savienojums ar serveri.");
       return;
     }
     if (
@@ -487,17 +504,17 @@ export function startTable({ connection: localConnection = null } = {}) {
   socket.on("connect", join);
   socket.on("game:state", accept);
   socket.on("game:error", (message) => {
-    connection.textContent = message;
+    setConnectionMessage(message);
   });
   socket.on("disconnect", () => {
     connected = false;
     busy = false;
-    connection.textContent = "Savienojums pārtrūka. Mēģina atjaunot…";
+    setConnectionMessage("Savienojums pārtrūka. Mēģina atjaunot…");
     render();
   });
   socket.on("connect_error", () => {
     connected = false;
-    connection.textContent = "Serveris nav sasniedzams. Mēģina atjaunot…";
+    setConnectionMessage("Serveris nav sasniedzams. Mēģina atjaunot…");
     render();
   });
   let clock = setInterval(updateClocks, 250);
@@ -512,6 +529,6 @@ export function startTable({ connection: localConnection = null } = {}) {
       socket.connect();
     }
   });
-  connection.textContent = "Pievienojas spēlei…";
+  setConnectionMessage("Pievienojas spēlei…");
   socket.connect();
 }

@@ -150,7 +150,7 @@ export function createRoomsRouter(
       const { timeLimitSeconds, allowGuests } = req.body;
       if (
         timeLimitSeconds !== undefined &&
-        ![60, 180, 300, 600].includes(timeLimitSeconds)
+        ![0, 60, 180, 300, 600].includes(timeLimitSeconds)
       )
         fail("Nederīgs laika limits.", 400);
       if (allowGuests !== undefined && typeof allowGuests !== "boolean")

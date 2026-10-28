@@ -11,7 +11,7 @@ Konta lapā pieslēdzies lietotājs var nomainīt lietotājvārdu un paroli, kā
 
 Pārbaudes: `npm test` un `npm run build`. API testi izmanto atmiņas datubāzes aizvietotāju; reālai MySQL pārbaudei nepieciešams konfigurēts `.env` un palaistas migrācijas.
 
-Publicēšanai palaid `npm run build` un `npm run server`, iestati `NODE_ENV=production` un `APP_ORIGIN` uz vietnes HTTPS izcelsmi (bez beigu slīpsvītras). Serveris apkalpo arī `dist` failus. Mēģinājumu ierobežojums darbojas viena servera procesa ietvaros; vairākiem procesiem nepieciešama kopīga ierobežojumu krātuve.
+Publicēšanai palaid `npm run build` un `npm start` (tas palaiž `npm run server`), iestati `NODE_ENV=production` un `APP_ORIGIN` uz vietnes HTTPS izcelsmi (bez beigu slīpsvītras). Serveris apkalpo arī `dist` failus. Mēģinājumu ierobežojums darbojas viena servera procesa ietvaros; vairākiem procesiem nepieciešama kopīga ierobežojumu krātuve.
 
 Serveris un Prisma migrācijas izmanto vienu `DATABASE_URL`. Railway MySQL pieslēgumam no izstrādātāja datora jāizmanto ārēji sasniedzams savienojums; Railway MySQL servisa `MYSQL_PUBLIC_URL` ir pieejams pēc publiskas TCP piekļuves ieslēgšanas. Railway iekšējā `MYSQL_URL` ir paredzēta pakalpojumiem tā privātajā tīklā. Skatīt [Railway MySQL dokumentāciju](https://docs.railway.com/databases/mysql). Savienojuma virkni glabā tikai lokālajā `.env` vai hostinga noslēpumos, nevis Git. Pirms migrācijām pārbaudi, ka izvēlēta komandas izstrādes datubāze. Migrācijas izveido tabulas; esošie lokālie konti automātiski netiek pārnesti.
 

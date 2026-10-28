@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { createSoloConnection } from "../src/js/solo-connection.js";
+import { sortHand } from "../src/js/game-logic.js";
 import { createMultiplayer } from "../lib/multiplayer.js";
 afterEach(() => {
   vi.clearAllTimers();
@@ -73,6 +74,53 @@ test("bot declares pickup, waits for player throw-ins and confirmation, and rest
   expect(view.hand).toEqual(hand);
   expect(view.bout).toBe(1);
   restored.disconnect();
+});
+test("bot makes its opening move when it starts the game", async () => {
+  const { storage } = fixture();
+  const saved = JSON.parse(storage.getItem("durak-solo-v2:SOLOTEST"));
+  saved.game.attacker = "bot";
+  saved.game.defender = "player";
+  saved.game.timed = false;
+  storage.setItem("durak-solo-v2:SOLOTEST", JSON.stringify(saved));
+
+  const connection = createSoloConnection(
+    { ...room, timeLimitSeconds: 0 },
+    { storage },
+  );
+  connection.connect();
+  await vi.advanceTimersByTimeAsync(800);
+
+  const view = (await connection.emitWithAck("game:join", {})).game;
+  expect(view.timed).toBe(false);
+  expect(view.attacker).toBe("bot");
+  expect(view.phase).toBe("defend");
+  expect(view.attacks).toHaveLength(1);
+  expect(view.legal.take).toBe(true);
+  connection.disconnect();
+});
+test("sorted hands keep trumps to the right as cards are added or removed", () => {
+  const hand = [
+    { id: "trump-high", rank: 14, suit: "hearts" },
+    { id: "high", rank: 14, suit: "clubs" },
+    { id: "trump-low", rank: 6, suit: "hearts" },
+    { id: "middle", rank: 10, suit: "diamonds" },
+    { id: "low-spades", rank: 6, suit: "spades" },
+    { id: "low-clubs", rank: 6, suit: "clubs" },
+  ];
+  expect(sortHand(hand, "hearts").map((card) => card.id)).toEqual([
+    "low-clubs",
+    "low-spades",
+    "middle",
+    "high",
+    "trump-low",
+    "trump-high",
+  ]);
+  expect(sortHand(hand.slice(1, 4), "hearts").map((card) => card.id)).toEqual([
+    "middle",
+    "high",
+    "trump-low",
+  ]);
+  expect(hand[0].id).toBe("trump-high");
 });
 test("local timeout reports completion and a restored finished game retries the notification", async () => {
   const { storage } = fixture(),

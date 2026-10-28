@@ -311,6 +311,40 @@ test("room capacity and host-only settings remain enforced", async () => {
     (await request("/FULLROOM/game", undefined, undefined, "GET")).status,
   ).toBe(403);
 });
+test("room settings accept no time limit and the server never expires that match", async () => {
+  const a = await request("/", {
+    code: "NOTIMELM",
+    mode: "classic",
+    name: "Host",
+    allowGuests: true,
+  });
+  const b = await request("/NOTIMELM/join", { name: "Guest" });
+  const setting = await request(
+    "/NOTIMELM/settings",
+    { timeLimitSeconds: 0 },
+    a.cookie,
+    "PATCH",
+  );
+  expect(setting.status).toBe(200);
+  expect(setting.body.room.timeLimitSeconds).toBe(0);
+
+  const started = await request("/NOTIMELM/start", {}, a.cookie);
+  expect(started.status).toBe(200);
+  const room = await app.locals.matches.load("NOTIMELM");
+  expect(room.gameState.timed).toBe(false);
+
+  await db.match.update({
+    where: { id: room.id },
+    data: {
+      gameState: { ...room.gameState, updatedAt: Date.now() - 1000000000 },
+    },
+  });
+  await app.locals.matches.expire();
+  const activeRoom = await app.locals.matches.load("NOTIMELM");
+  expect(activeRoom.status).toBe("ACTIVE");
+  expect(activeRoom.gameState.result).toBeNull();
+  expect(b.status).toBe(200);
+});
 test("timeout maintenance finishes a disconnected game and saves the loser", async () => {
   const { a } = await setup();
   const room = await app.locals.matches.load("TESTROOM");
