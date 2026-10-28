@@ -201,10 +201,6 @@ body {
     gap: 20px;
 }
 
-#side-navigation-menu li:nth-child(3) {
-    margin-top: auto;
-}
-
 #side-navigation-menu a,
 #side-navigation-menu button {
     box-sizing: border-box;
@@ -861,9 +857,6 @@ body {
         margin: 0;
     }
 
-    #side-navigation-menu li:nth-child(3) {
-        margin-top: 0;
-    }
 }
 
 .auth-page {
