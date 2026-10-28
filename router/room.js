@@ -60,7 +60,7 @@ export function createRoomsRouter(
       try {
         await fn(req, res);
       } catch (e) {
-        if (e.status) return res.status(e.status).json({ error: e.message });
+        if (e.status) return res.status(e.status).json({ error: e.message, ...(e.code ? { code: e.code } : {}) });
         if (["P2002", "P2034"].includes(e.code))
           return res
             .status(409)
@@ -77,19 +77,26 @@ export function createRoomsRouter(
     )
       fail("Nederīgs kods vai režīms.", 400);
     const data = playerData(req.identity, name);
-    const existing = await prisma.match.findUnique({
-      where: { roomCode: code },
-      include: service.include,
-    });
-    if (existing) {
+    try {
+      // The unique roomCode constraint handles collisions atomically. Avoid a
+      // WAN round trip checking a randomly generated code before every insert.
+      const room = await prisma.match.create({
+        data: { roomCode: code, mode, allowGuests, players: { create: data } },
+        include: service.include,
+      });
+      send(res, room, req, 201);
+    } catch (error) {
+      if (error.code !== "P2002") throw error;
+      // A reload/retry by the same host returns the existing room, without
+      // replacing settings or granting ownership to someone with its code.
+      const existing = await prisma.match.findUnique({
+        where: { roomCode: code },
+        include: service.include,
+      });
+      if (!existing) throw error;
       host(existing, req.identity);
-      return send(res, existing, req);
+      send(res, existing, req);
     }
-    const room = await prisma.match.create({
-      data: { roomCode: code, mode, allowGuests, players: { create: data } },
-      include: service.include,
-    });
-    send(res, room, req, 201);
   });
   async function join(code, req) {
     const data = playerData(req.identity, req.body.name);
@@ -221,25 +228,7 @@ export function createRoomsRouter(
     send(res, room, req);
   });
   route("post", "/:code/leave", async (req, res) => {
-    const code = req.params.code.toUpperCase();
-    const current = await service.load(code);
-    if (current.status === "ACTIVE" && current.gameState) {
-      const room = await service.action(
-        code,
-        req.identity,
-        { type: "resign" },
-        current.version,
-      );
-      return send(res, room, req);
-    }
-    const room = await service.edit(code, async (r, db) => {
-      const p = service.requireMember(r, req.identity);
-      if (r.status === "FINISHED") return null;
-      if (r.status === "ACTIVE" || r.players[0].id === p.id)
-        return { status: "FINISHED", endedAt: new Date() };
-      await db.matchPlayer.delete({ where: { id: p.id } });
-    });
-    send(res, room, req);
+    send(res, await service.leave(req.params.code.toUpperCase(), req.identity, req.body.membershipId ?? null), req);
   });
   return router;
 }

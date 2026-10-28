@@ -1,4 +1,4 @@
-// Requires a running Vite app; API responses are mocked, so no database is used.
+// Starts Vite unless DURAK_TEST_ORIGIN is set; mocked API, no database writes.
 // Set DURAK_PLAYWRIGHT_PATH and optionally DURAK_CHROME_PATH as in table-browser.mjs.
 import assert from "node:assert/strict";
 const { chromium } = await import(process.env.DURAK_PLAYWRIGHT_PATH || "playwright");
@@ -6,6 +6,10 @@ const browser = await chromium.launch({
   headless: true,
   ...(process.env.DURAK_CHROME_PATH ? { executablePath: process.env.DURAK_CHROME_PATH } : {}),
 });
+const vite = process.env.DURAK_TEST_ORIGIN ? null : await (await import("vite")).createServer({
+  server: { host: "127.0.0.1", port: 0 }, logLevel: "error",
+});
+await vite?.listen();
 const page = await browser.newPage();
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
@@ -47,23 +51,24 @@ async function saved() {
 }
 const guests = page.locator("#allow-guests");
 try {
-  const base = process.env.DURAK_TEST_ORIGIN || "http://localhost:3000";
+  const base = process.env.DURAK_TEST_ORIGIN || `http://127.0.0.1:${vite.httpServer.address().port}`;
   await page.goto(`${base}/src/pages%20%2B%20css%20stylesheet/room.html?code=ROOMTEST&mode=classic&role=host`);
   const create = await next("POST");
   assert.equal(create.body.allowGuests, false);
-  await guests.check();
-  await page.locator('input[name="time-limit"][value="180"]').check();
-  assert.equal(pending.length, 0, "Do not save before room creation finishes");
+  assert.equal(await page.locator(".room-lobby").isHidden(), true);
+  assert.equal(await page.locator("#room-loading").isVisible(), true);
   await respond(create);
+  await saved();
+  assert.equal(await page.locator(".room-lobby").isVisible(), true);
+  assert.equal(await page.locator("#room-loading").isHidden(), true);
+  await guests.check();
   const initialSave = await next("PATCH");
   assert.equal(initialSave.body.allowGuests, true);
-  assert.equal(initialSave.body.timeLimitSeconds, 180);
-  assert.equal(await guests.isChecked(), true);
   assert.equal(await page.locator("#begin-match").isDisabled(), true);
-  state = { ...state, allowGuests: true, timeLimitSeconds: 180, version: 1 };
+  state = { ...state, allowGuests: true, version: 1 };
   await respond(initialSave);
   await saved();
-  console.log("PASS: early settings changes survive delayed creation");
+  console.log("PASS: direct navigation waits for confirmed room data; settings save normally");
 
   await guests.uncheck();
   const firstSave = await next("PATCH");
@@ -106,8 +111,36 @@ try {
   await respond(retry);
   await saved();
   assert.equal(await guests.isChecked(), true);
-  assert.deepEqual(errors, []);
   console.log("PASS: failed save is visible and the next change can be saved");
+
+  // The home page loads before the background leave has completed.
+  await page.route("**/api/**", (route) => {
+    if (route.request().url().includes("/api/rooms")) return route.fallback();
+    return route.fulfill({ json: { user: null } });
+  });
+  await page.evaluate(() => {
+    const link = document.querySelector("#leave-room");
+    link.click();
+    link.click();
+  });
+  await page.waitForURL("**/index.html");
+  const leave = await next("POST");
+  assert.match(leave.route.request().url(), /\/leave$/);
+  assert.equal(leave.body.membershipId, "host");
+  assert.equal(pending.length, 0, "Double click must not issue a second leave");
+  assert.equal(await page.locator("#room-exit-notice").isVisible(), true);
+  await leave.route.fulfill({ status: 503, json: { error: "Leave failed" } });
+  await page.waitForFunction(() => !document.querySelector("#retry-room-exit").hidden);
+  assert.match(page.url(), /index.html/, "Failure is reported on the home page");
+  assert.ok(await page.evaluate(() => sessionStorage.getItem("durak-pending-room-exit")));
+  await page.locator("#retry-room-exit").click();
+  const retryLeave = await next("POST");
+  await respond(retryLeave, { ...state, status: "finished" });
+  await page.waitForFunction(() => document.querySelector("#room-exit-notice").hidden);
+  assert.equal(await page.evaluate(() => sessionStorage.getItem("durak-pending-room-exit")), null);
+  console.log("PASS: immediate home navigation, single background leave, visible failure and retry");
+  assert.deepEqual(errors, []);
 } finally {
   await browser.close();
+  await vite?.close();
 }

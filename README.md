@@ -61,6 +61,22 @@ DuraKlash ir kāršu spēles "Durak" digitalizētā versija tīmeklī. Projektā
 
 ## Multiplayer (2–6 spēlētāji)
 
+Poga **Izveidot istabu** sāk servera pieprasījumu uzreiz un rāda **Veido istabu…**.
+Istabas lapa atveras ar servera apstiprinātu dalībnieku sarakstu un iestatījumiem.
+Izveides, ātrās pievienošanās un pievienošanās pēc koda atbilde tiek vienreiz nodota
+istabas lapai, neveicot atkārtotu izveides/pievienošanās pieprasījumu. Lapas pārlāde
+atkal saņem svaigus datus no servera; izveides kļūdas parādās pirms pārejas uz istabu.
+
+Izejot no gaidīšanas istabas, sākumlapa atveras uzreiz un fonā nosūta iziešanas
+pieprasījumu. Nepabeigtā darbība saglabājas cilnes `sessionStorage`, lai to varētu
+atkārtot pēc pārlādes vai savienojuma atjaunošanas. Kļūdas gadījumā sākumlapā
+redzama poga **Mēģināt vēlreiz**; jauna pievienošanās sagaida iepriekšējās iziešanas
+pabeigšanu. Pieprasījums ir piesaistīts konkrētajai dalībai, lai aizkavēts atkārtojums
+neizņemtu spēlētāju, kas vēlāk pievienojies no jauna. Ja pārlūka krātuve nav pieejama,
+saglabājas iziešana ar servera apstiprinājuma gaidīšanu.
+Dalībniekam dzēš dalību; izveidotājam istabu atzīmē kā pabeigtu (`FINISHED`).
+Aktīvā multiplayer spēlē iziešana ir padošanās.
+
 Pēc atjauninājuma palaid `npm ci`, `npm run db:generate` un `npm run db:migrate`,
 pēc tam pārstartē `npm run server` un `npm run dev`. Migrācija pievieno spēles
 stāvokļa JSON un versiju; esošie konti netiek dzēsti.

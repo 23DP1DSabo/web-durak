@@ -30,6 +30,9 @@ function database() {
     session: { findUnique: async () => null },
     match: {
       create: async ({ data }) => {
+        if (rooms.some((r) => r.roomCode === data.roomCode)) {
+          throw Object.assign(new Error("Duplicate room code"), { code: "P2002" });
+        }
         const { players: ps, ...rest } = data;
         const r = {
           id: next++,
@@ -620,4 +623,107 @@ test("a three-player timeout stays active and records the loss through final com
   expect(room.status).toBe("FINISHED");
   expect(room.gameState.result.losers).toContain(expiredId);
   expect(room.players.map((p) => p.result).sort()).toEqual(["DURAK", "DURAK", "WIN"]);
+});
+
+
+test("room creation retries preserve the original host and settings; a collision cannot steal a room", async () => {
+  const body = { code: "RETRY123", mode: "classic", name: "Host", allowGuests: true };
+  const created = await request("/", body);
+  expect(created.status).toBe(201);
+  await request("/RETRY123/settings", { timeLimitSeconds: 60, allowGuests: false }, created.cookie, "PATCH");
+  const repeated = await request("/", body, created.cookie);
+  expect(repeated.status).toBe(200);
+  expect(repeated.body.room).toMatchObject({ hostId: created.body.room.hostId, timeLimitSeconds: 60, allowGuests: false });
+  expect(repeated.body.room.players).toHaveLength(1);
+  expect((await request("/", body)).status).toBe(403);
+  expect((await app.locals.matches.load("RETRY123")).players).toHaveLength(1);
+});
+
+
+test("lobby guest leaves without closing the room; host closes it with one read and one write", async () => {
+  const a = await request("/", { code: "TESTROOM", mode: "classic", name: "Host", allowGuests: true });
+  const b = await request("/TESTROOM/join", { name: "Guest" });
+  expect((await request("/TESTROOM/leave", { playerId: b.body.room.selfId })).status).toBe(403);
+  let reads = 0, transactions = 0;
+  const find = db.match.findUnique, transaction = db.$transaction;
+  db.match.findUnique = (...args) => { reads++; return find(...args); };
+  db.$transaction = (...args) => { transactions++; return transaction(...args); };
+  const left = await request("/TESTROOM/leave", {}, b.cookie);
+  expect(left.status).toBe(200);
+  expect(left.body.room).toMatchObject({ status: "waiting", selfId: null });
+  expect(left.body.room.players.map((p) => p.id)).toEqual([a.body.room.selfId]);
+  expect(reads).toBe(1);
+  expect(transactions).toBe(1);
+  reads = transactions = 0;
+  const closed = await request("/TESTROOM/leave", {}, a.cookie);
+  expect(closed.status).toBe(200);
+  expect(closed.body.room.status).toBe("finished");
+  expect(reads).toBe(1);
+  expect(transactions).toBe(0);
+  expect((await app.locals.matches.load("TESTROOM")).status).toBe("FINISHED");
+  expect((await request("/TESTROOM/join", { name: "Late guest" })).status).toBe(409);
+  expect((await request("/TESTROOM/leave", {}, a.cookie)).status).toBe(200);
+});
+
+test("failed lobby deletion rolls back version and membership without broadcasting", async () => {
+  await request("/", { code: "TESTROOM", mode: "classic", name: "Host", allowGuests: true });
+  const b = await request("/TESTROOM/join", { name: "Guest" });
+  const service = app.locals.matches;
+  const before = await service.load("TESTROOM");
+  const who = await service.identity({ headers: { cookie: b.cookie } });
+  let broadcasts = 0;
+  service.events.on("changed", () => broadcasts++);
+  db.matchPlayer.delete = async () => { throw new Error("Delete failed"); };
+  await expect(service.leave("TESTROOM", who)).rejects.toThrow("Delete failed");
+  expect(await service.load("TESTROOM")).toEqual(before);
+  expect(broadcasts).toBe(0);
+});
+
+test("a concurrent start prevents a stale lobby leave from deleting a match participant", async () => {
+  const a = await request("/", { code: "TESTROOM", mode: "classic", name: "Host", allowGuests: true });
+  const b = await request("/TESTROOM/join", { name: "Guest" });
+  const service = app.locals.matches;
+  const who = await service.identity({ headers: { cookie: b.cookie } });
+  const originalTransaction = db.$transaction;
+  db.$transaction = async (...args) => {
+    db.$transaction = originalTransaction;
+    expect((await request("/TESTROOM/start", {}, a.cookie)).status).toBe(200);
+    return originalTransaction(...args);
+  };
+  await expect(service.leave("TESTROOM", who)).rejects.toThrow("Istaba mainījās");
+  const after = await service.load("TESTROOM");
+  expect(after.status).toBe("ACTIVE");
+  expect(after.players).toHaveLength(2);
+  expect(after.players.map((p) => p.result)).toEqual([null, null]);
+  // Retry uses the current state and records resignation instead of deletion.
+  expect((await service.leave("TESTROOM", who)).status).toBe("FINISHED");
+  expect((await service.load("TESTROOM")).players.map((p) => p.result)).toEqual(["WIN", "DURAK"]);
+});
+
+
+test("background leave retries cannot remove a player who rejoined with a new membership", async () => {
+  await request("/", { code: "TESTROOM", mode: "classic", name: "Host", allowGuests: true });
+  const b = await request("/TESTROOM/join", { name: "Guest" });
+  const intent = { membershipId: b.body.room.selfId };
+  expect((await request("/TESTROOM/leave", intent, b.cookie)).status).toBe(200);
+  const repeated = await request("/TESTROOM/leave", intent, b.cookie);
+  expect(repeated.status).toBe(403);
+  expect(repeated.body.code).toBe("NOT_ROOM_MEMBER");
+  const joined = await request("/TESTROOM/join", { name: "Guest again" }, b.cookie);
+  expect(joined.body.room.selfId).not.toBe(intent.membershipId);
+  const delayed = await request("/TESTROOM/leave", intent, b.cookie);
+  expect(delayed.body.code).toBe("NOT_ROOM_MEMBER");
+  const current = (await request("/TESTROOM", undefined, b.cookie, "GET")).body.room;
+  expect(current.selfId).toBe(joined.body.room.selfId);
+  expect(current.players).toHaveLength(2);
+});
+
+test("repeated background resignation does not apply another loss or advance the game", async () => {
+  const [a] = await setupMany(3);
+  const intent = { membershipId: a.body.room.selfId };
+  const left = await request("/TESTROOM/leave", intent, a.cookie);
+  expect(left.status).toBe(200);
+  const before = await app.locals.matches.load("TESTROOM");
+  expect((await request("/TESTROOM/leave", intent, a.cookie)).status).toBe(200);
+  expect(await app.locals.matches.load("TESTROOM")).toEqual(before);
 });

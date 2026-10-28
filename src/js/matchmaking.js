@@ -1,3 +1,6 @@
+import { finishRoomExit, initializeRoomExit } from "./room-exit.js";
+import { storeRoomHandoff } from "./room-handoff.js";
+
 const modeNames = {
   classic: "Klasiskais duraks",
   passing: "Padošanu duraks",
@@ -11,46 +14,48 @@ const joinRoomForm = document.querySelector("#join-room-form");
 const roomCodeInput = document.querySelector("#room-code-input");
 const joinRoomMessage = document.querySelector("#join-room-message");
 let selectedMode = "classic";
+let enteringRoom = false;
+let pendingRoomCode = null;
+let resetEntry = null;
 
-function openRoomPage(code, role) {
-  if (role === "host") {
-    sessionStorage.setItem(
-      `durak-room:${code}`,
-      JSON.stringify({
-        code,
-        mode: selectedMode,
-        timeLimitSeconds: 600,
-        status: "waiting",
-        createdAt: Date.now(),
-        players: [],
-      }),
-    );
-  }
-
+function openRoomPage(room, role) {
   const roomUrl = new URL("./room.html", window.location.href);
-  roomUrl.searchParams.set("mode", selectedMode);
-  roomUrl.searchParams.set("code", code);
+  roomUrl.searchParams.set("mode", room.mode);
+  roomUrl.searchParams.set("code", room.code);
   roomUrl.searchParams.set("role", role);
+  const handoff = storeRoomHandoff(room);
+  if (handoff) roomUrl.searchParams.set("handoff", handoff);
   window.location.assign(roomUrl);
 }
 
-async function checkRoomAccess(code) {
-  const response = await fetch(
-    `/api/rooms/${encodeURIComponent(code)}/access`,
-    {
-      method: "GET",
+async function enterRoom(path, body, button, label, onError) {
+  if (enteringRoom) return;
+  enteringRoom = true;
+  const originalText = button.textContent;
+  resetEntry = () => {
+    enteringRoom = false;
+    button.disabled = false;
+    button.textContent = originalText;
+    resetEntry = null;
+  };
+  button.disabled = true;
+  button.textContent = label;
+  try {
+    // Do not join/create another room until the previous membership is cleared.
+    await finishRoomExit();
+    const response = await fetch(path, {
+      method: "POST",
       credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    },
-  );
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(data.error || "Neizdevās pārbaudīt istabu.");
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ ...body, playerId: getPlayerId(), name: await getQuickplayPlayerName() }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Neizdevās atvērt istabu. Mēģini vēlreiz.");
+    openRoomPage(data.room, data.room.selfId === data.room.hostId ? "host" : "player");
+  } catch (error) {
+    resetEntry?.();
+    onError(error);
   }
-
-  return data;
 }
 
 function getPlayerId() {
@@ -79,44 +84,8 @@ async function getQuickplayPlayerName() {
   return name;
 }
 
-async function quickplay(mode, button) {
-  const originalText = button.textContent;
-
-  button.disabled = true;
-  button.textContent = "Meklē istabu...";
-
-  try {
-    const name = await getQuickplayPlayerName();
-
-    const response = await fetch("/api/rooms/quickplay", {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        mode,
-        playerId: getPlayerId(),
-        name,
-      }),
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(data.error || "Neizdevās atrast spēles istabu.");
-    }
-
-    // Navigate using the room code returned by the server.
-    selectedMode = data.room.mode;
-    openRoomPage(data.room.code, "player");
-  } catch (error) {
-    alert(error.message);
-  } finally {
-    button.disabled = false;
-    button.textContent = originalText;
-  }
+function quickplay(mode, button) {
+  return enterRoom("/api/rooms/quickplay", { mode }, button, "Meklē istabu...", (error) => alert(error.message));
 }
 
 function createRoomCode() {
@@ -200,7 +169,10 @@ export function advanceClock(g, now = Date.now()) {
 
 document.querySelectorAll("[data-room-mode]").forEach((button) => {
   button.addEventListener("click", () => {
+    if (enteringRoom) return;
     selectedMode = button.dataset.roomMode;
+    pendingRoomCode = null;
+    document.querySelector("#create-room-message").hidden = true;
     roomModeLabel.textContent = modeNames[selectedMode] ?? "Spēle";
     roomChoiceActions.hidden = false;
     joinRoomForm.hidden = true;
@@ -210,12 +182,22 @@ document.querySelectorAll("[data-room-mode]").forEach((button) => {
   });
 });
 
+roomDialog.addEventListener("cancel", (event) => {
+  if (enteringRoom) event.preventDefault();
+});
+
 roomDialog.addEventListener("click", (event) => {
   const action = event.target.closest("[data-room-action]")?.dataset.roomAction;
-  if (!action) return;
+  if (!action || enteringRoom) return;
 
   if (action === "create") {
-    openRoomPage(createRoomCode(), "host");
+    const button = event.target.closest("[data-room-action]");
+    const message = document.querySelector("#create-room-message");
+    message.hidden = true;
+    enterRoom("/api/rooms", { code: pendingRoomCode ??= createRoomCode(), mode: selectedMode }, button, "Veido istabu...", (error) => {
+      message.textContent = error.message;
+      message.hidden = false;
+    });
   } else if (action === "show-join") {
     roomChoiceActions.hidden = true;
     joinRoomForm.hidden = false;
@@ -250,22 +232,14 @@ joinRoomForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  joinRoomForm.querySelector('[type="submit"]').disabled = true;
-  joinRoomMessage.textContent = "Pārbauda istabu...";
+  if (enteringRoom) return;
+  joinRoomMessage.textContent = "Pievienojas istabai...";
   joinRoomMessage.hidden = false;
-
-  try {
-    await checkRoomAccess(code);
-
-    // Navigate only after the server confirms access.
-    openRoomPage(code, "player");
-  } catch (error) {
-    joinRoomMessage.textContent = error.message;
-    joinRoomMessage.hidden = false;
-  } finally {
-    const submitButton = joinRoomForm.querySelector('[type="submit"]');
-    if (submitButton) submitButton.disabled = false;
-  }
+  await enterRoom(`/api/rooms/${encodeURIComponent(code)}/join`, {},
+    joinRoomForm.querySelector('[type="submit"]'), "Pievienojas...", (error) => {
+      joinRoomMessage.textContent = error.message;
+      joinRoomMessage.hidden = false;
+    });
 });
 
 const quickplayButtons = {
@@ -281,3 +255,13 @@ for (const [buttonId, mode] of Object.entries(quickplayButtons)) {
     quickplay(mode, button);
   });
 }
+
+// A back/forward-cache restore keeps JS state, including the navigation lock.
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    resetEntry?.();
+    pendingRoomCode = null;
+  }
+});
+
+initializeRoomExit();

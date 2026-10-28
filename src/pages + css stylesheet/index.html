@@ -16,6 +16,10 @@
                 <header class="matchmaking-header">
                     <h1>DuraKlash</h1>
                 </header>
+                <div id="room-exit-notice" role="status" aria-live="polite" hidden>
+                    <span id="room-exit-message"></span>
+                    <button id="retry-room-exit" type="button" hidden>Mēģināt vēlreiz</button>
+                </div>
                 <div id="matchmaking-mode-selection">
                 <div id="regular-mode-games" class="game-rooms">
                     <h2>Spēles istabas</h2>
@@ -45,6 +49,7 @@
             <h2 id="room-dialog-title">Spēles istaba</h2>
             <div id="room-choice-actions" class="room-dialog-actions">
                 <button type="button" data-room-action="create">Izveidot istabu</button>
+                <p id="create-room-message" role="status" aria-live="polite" hidden></p>
                 <button type="button" data-room-action="show-join">Pievienoties istabai</button>
             </div>
             <form id="join-room-form" hidden novalidate>

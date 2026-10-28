@@ -2566,3 +2566,7 @@ body[data-theme="dark"] .room-dialog .room-code {
 .drag-table .player-hand { flex-wrap: wrap; overflow: visible; justify-content: center; gap: 5px; }
 .drag-table .player-hand .hand-card + .hand-card { margin-left: 0; }
 .drag-table .player-hand .hand-card { touch-action: none; }
+
+#room-exit-notice { margin: 0 0 1rem; padding: .75rem 1rem; border: 1px solid currentColor; border-radius: 8px; }
+#room-exit-notice[hidden], #retry-room-exit[hidden] { display: none !important; }
+#retry-room-exit { margin-left: .5rem; cursor: pointer; }

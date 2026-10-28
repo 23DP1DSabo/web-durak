@@ -1,3 +1,6 @@
+import { queueRoomExit } from "./room-exit.js";
+import { takeRoomHandoff } from "./room-handoff.js";
+
 const modeNames = {
   classic: "Klasiskais duraks",
   passing: "Padošanu duraks",
@@ -23,6 +26,8 @@ const copyCodeStatus = document.querySelector("#copy-room-status");
 let room = null;
 let playerName = "Viesis";
 let busy = false;
+let leaving = false;
+let initializing = true;
 let redirected = false;
 let refreshing = false;
 let pendingSettings = {};
@@ -38,7 +43,7 @@ function renderSettings() {
     if (settings.timeLimitSeconds !== undefined) {
       input.checked = Number(input.value) === settings.timeLimitSeconds;
     }
-    input.disabled = !isHost || (room && room.status !== "waiting");
+    input.disabled = leaving || !isHost || (room && room.status !== "waiting");
   }
   if (settings.timeLimitSeconds !== undefined) {
     timeLimitStatus.textContent = `Katram spēlētājam: ${settings.timeLimitSeconds / 60} min`;
@@ -46,7 +51,7 @@ function renderSettings() {
   if (settings.allowGuests !== undefined) {
     allowGuestsInput.checked = settings.allowGuests;
   }
-  allowGuestsInput.disabled = !isHost || (room && room.status !== "waiting");
+  allowGuestsInput.disabled = leaving || !isHost || (room && room.status !== "waiting");
   beginButton.hidden = !isHost;
   beginButton.disabled = !isHost || !room || room.status !== "waiting" ||
     room.players.length < 1 || busy || hasPendingSettings();
@@ -95,6 +100,7 @@ async function copyRoomCode() {
 
 function setStatus(message) {
   statusElement.textContent = message;
+  if (!room) document.querySelector("#room-loading").textContent = message;
 }
 
 async function api(url, options = {}) {
@@ -142,7 +148,9 @@ async function loadPlayerName() {
 }
 
 function renderRoom() {
-  if (!room) return;
+  if (!room || leaving) return;
+  document.querySelector("#room-loading").hidden = true;
+  document.querySelector(".room-lobby").hidden = false;
   isHost = room.selfId !== null && room.selfId === room.hostId;
   playerName =
     room.players.find((player) => player.id === room.selfId)?.name ||
@@ -263,6 +271,7 @@ async function refreshRoom() {
 
     renderRoom();
   } catch (error) {
+    if (leaving || redirected) return;
     if (error.status === 404) {
       redirected = true;
       window.clearInterval(refreshTimer);
@@ -279,7 +288,7 @@ async function refreshRoom() {
 }
 
 function updateSettings(event) {
-  if (!isHost || (room && room.status !== "waiting")) return;
+  if (leaving || !isHost || (room && room.status !== "waiting")) return;
   // Keep user intent even while creation or another save is in flight.
   if (event.target === allowGuestsInput) {
     pendingSettings.allowGuests = allowGuestsInput.checked;
@@ -423,6 +432,20 @@ async function initializeRoom() {
     return;
   }
 
+  const handoff = params.get("handoff");
+  const initialRoom = takeRoomHandoff(roomCode, handoff);
+  if (handoff) {
+    const url = new URL(location.href);
+    url.searchParams.delete("handoff");
+    history.replaceState(history.state, "", url);
+  }
+  if (initialRoom) {
+    room = initialRoom;
+    renderRoom();
+    if (!redirected) refreshTimer = window.setInterval(refreshRoom, 2000);
+    return;
+  }
+
   await loadPlayerName();
 
   try {
@@ -456,7 +479,7 @@ async function initializeRoom() {
 
     renderRoom();
     await saveSettings();
-    refreshTimer = window.setInterval(refreshRoom, 2000);
+    if (!redirected) refreshTimer = window.setInterval(refreshRoom, 2000);
   } catch (error) {
     console.error("Failed to initialize room:", error);
 
@@ -482,26 +505,59 @@ async function initializeRoom() {
 }
 
 async function leaveRoom() {
-  if (!roomCode || !playerId || redirected) {
+  if (redirected || leaving) return;
+  if (!roomCode || !playerId || (!room && !initializing)) {
     window.location.replace("/");
     return;
   }
+  if (!room || busy) {
+    setStatus("Uzgaidi, līdz pabeigta pašreizējā istabas darbība, un mēģini vēlreiz.");
+    return;
+  }
 
+  if (queueRoomExit(room)) {
+    redirected = true;
+    leaving = true;
+    window.clearInterval(refreshTimer);
+    window.location.replace(new URL("./index.html", location.href));
+    return;
+  }
+
+  // If browser storage is unavailable, retain the confirmed-exit fallback.
+  leaving = true;
+  busy = true;
+  const link = document.querySelector("#leave-room");
+  const originalText = link.textContent;
+  link.textContent = "Iziet no istabas…";
+  link.setAttribute("aria-disabled", "true");
+  renderSettings();
+  setStatus("Iziet no istabas…");
+  const goHome = () => {
+    redirected = true;
+    window.clearInterval(refreshTimer);
+    window.location.replace("/");
+  };
   try {
     await api(`/api/rooms/${encodeURIComponent(roomCode)}/leave`, {
       method: "POST",
-      body: JSON.stringify({ playerId }),
+      body: JSON.stringify({ playerId, membershipId: room.selfId }),
     });
-
-    redirected = true;
-    window.clearInterval(refreshTimer);
-    window.location.replace("/");
+    goHome();
   } catch (error) {
+    if (error.status === 404) {
+      goHome();
+      return;
+    }
     console.error("Failed to leave room:", error);
-    setStatus(`Neizdevās pamest istabu: ${error.message}`);
-    redirected = true;
-    window.clearInterval(refreshTimer);
-    window.location.replace("/");
+    setStatus(`Neizdevās pamest istabu: ${error.message} Mēģini vēlreiz.`);
+  } finally {
+    if (!redirected) {
+      leaving = false;
+      busy = false;
+      link.textContent = originalText;
+      link.removeAttribute("aria-disabled");
+      renderSettings();
+    }
   }
 }
 
@@ -521,4 +577,4 @@ beginButton.addEventListener("click", startGame);
 copyCodeButton.addEventListener("click", copyRoomCode);
 
 renderSettings();
-initializeRoom();
+initializeRoom().finally(() => { initializing = false; });
