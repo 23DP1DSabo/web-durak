@@ -12,6 +12,55 @@ const roomCodeInput = document.querySelector("#room-code-input");
 const joinRoomMessage = document.querySelector("#join-room-message");
 let selectedMode = "classic";
 
+const menuToggle = document.querySelector("#frontpage-menu-toggle");
+const navigationMenu = document.querySelector("#side-navigation-menu");
+const mobileNavigation = window.matchMedia("(max-width: 700px)");
+
+if (menuToggle && navigationMenu) {
+  function setNavigationOpen(isOpen, restoreFocus = false) {
+    const shouldOpen = mobileNavigation.matches && isOpen;
+
+    menuToggle.setAttribute("aria-expanded", String(shouldOpen));
+    menuToggle.setAttribute(
+      "aria-label",
+      shouldOpen ? "Aizvērt navigāciju" : "Atvērt navigāciju",
+    );
+    navigationMenu.setAttribute("aria-hidden", String(mobileNavigation.matches && !shouldOpen));
+    navigationMenu.inert = mobileNavigation.matches && !shouldOpen;
+    document.querySelector("#frontpage-content").classList.toggle("mobile-nav-open", shouldOpen);
+
+    if (restoreFocus && !shouldOpen) menuToggle.focus();
+  }
+
+  setNavigationOpen(false);
+
+  menuToggle.addEventListener("click", () => {
+    setNavigationOpen(menuToggle.getAttribute("aria-expanded") !== "true");
+  });
+
+  navigationMenu.addEventListener("click", (event) => {
+    if (event.target.closest("a, button")) setNavigationOpen(false);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (
+      menuToggle.getAttribute("aria-expanded") === "true" &&
+      !navigationMenu.contains(event.target) &&
+      !menuToggle.contains(event.target)
+    ) {
+      setNavigationOpen(false);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && menuToggle.getAttribute("aria-expanded") === "true") {
+      setNavigationOpen(false, true);
+    }
+  });
+
+  mobileNavigation.addEventListener("change", () => setNavigationOpen(false));
+}
+
 function openRoomPage(code, role) {
   if (role === "host") {
     sessionStorage.setItem(
