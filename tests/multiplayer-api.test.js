@@ -6,7 +6,7 @@ import { attachRealtime } from "../lib/realtime.js";
 
 // Transactional in-memory adapter: transport and authorization use the real app.
 function database() {
-  let rooms = [],
+  let rounds = [], rooms = [],
     players = [],
     next = 1n,
     queue = Promise.resolve();
@@ -28,6 +28,13 @@ function database() {
         v?.increment !== undefined ? r[k] + v.increment : structuredClone(v);
   };
   const db = {
+    history: () => structuredClone(rounds),
+    matchRound: { upsert: async ({ create }) => {
+      const existing = rounds.find((round) => round.matchId === create.matchId && +round.startedAt === +create.startedAt);
+      if (existing) return existing;
+      rounds.push(structuredClone(create));
+      return create;
+    } },
     session: { findUnique: async () => null },
     match: {
       create: async ({ data }) => {
@@ -100,11 +107,11 @@ function database() {
     let release;
     queue = new Promise((r) => (release = r));
     await prev;
-    const before = structuredClone({ rooms, players, next });
+    const before = structuredClone({ rooms, players, rounds, next });
     try {
       return await fn(db);
     } catch (e) {
-      ({ rooms, players, next } = before);
+      ({ rooms, players, rounds, next } = before);
       throw e;
     } finally {
       release();
@@ -932,4 +939,43 @@ test("both unlocked neighbours can submit concurrent throw-ins; stale approvals 
   expect(room.gameState.attacks.map((c) => c.id).sort()).toEqual(["a", "b", "c"]);
   expect(room.gameState.finishedAttackers).toEqual([]);
   await expect(service.action("TESTROOM", identities[0], { type: "finish", bout: 0 }, version)).rejects.toThrow();
+});
+
+
+test("completion archives once, retains the result on rematch, and archives the next round separately", async () => {
+  const { a, b } = await setup();
+  const service = app.locals.matches;
+  const who = await service.identity({ headers: { cookie: a.cookie } });
+  const other = await service.identity({ headers: { cookie: b.cookie } });
+  let room = await service.load("TESTROOM");
+  const initialVersion = room.version;
+  const state = structuredClone(room.gameState);
+  state.attacker = a.body.room.selfId; state.defender = b.body.room.selfId;
+  state.players.find((p) => p.id === state.attacker).movesMade = 1;
+  state.updatedAt = Date.now() - 700000;
+  await db.match.update({ where: { id: room.id }, data: { gameState: state } });
+  room = await service.expireRoom("TESTROOM");
+  expect(db.history()).toHaveLength(1);
+  const archived = db.history()[0];
+  expect(archived.players.create.map((p) => p.result)).toEqual(["DURAK", "WIN"]);
+  await expect(service.action("TESTROOM", who, { type: "resign" }, initialVersion)).rejects.toThrow();
+  expect(db.history()).toHaveLength(1);
+  room = await service.readyNextRound("TESTROOM", who, room.version);
+  room = await service.readyNextRound("TESTROOM", other, room.version);
+  expect(room.status).toBe("ACTIVE");
+  expect(db.history()[0]).toEqual(archived);
+  await service.action("TESTROOM", other, { type: "resign" }, room.version);
+  expect(db.history()).toHaveLength(2);
+  expect(db.history()[1].players.create.map((p) => p.result)).toEqual(["WIN", "DURAK"]);
+});
+
+test("history save failure rolls back completion and participant results", async () => {
+  const { a } = await setup();
+  const service = app.locals.matches;
+  const room = await service.load("TESTROOM");
+  const who = await service.identity({ headers: { cookie: a.cookie } });
+  db.matchRound.upsert = async () => { throw new Error("History unavailable"); };
+  await expect(service.action("TESTROOM", who, { type: "resign" }, room.version)).rejects.toThrow("History unavailable");
+  expect(await service.load("TESTROOM")).toEqual(room);
+  expect(db.history()).toHaveLength(0);
 });

@@ -953,7 +953,8 @@ body {
     border-bottom: 1px solid rgb(232 216 173 / 35%);
 }
 
-.auth-page button {
+.auth-page button,
+.auth-page .button-like {
     min-height: 48px;
     padding: 12px 16px;
     border: 1px solid #b49762;
@@ -969,7 +970,8 @@ body {
     transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
 }
 
-.auth-page button:hover {
+.auth-page button:hover,
+.auth-page .button-like:hover {
     transform: translateY(-2px);
     filter: brightness(1.12);
     box-shadow: 4px 5px 0 rgb(25 14 7 / 45%);
@@ -2220,6 +2222,7 @@ body.auth-page[data-theme="light"] .room-side-panel h2 {
 
 body.auth-page[data-theme="light"] .auth-page button,
 body.auth-page[data-theme="light"] button,
+body.auth-page[data-theme="light"] .button-like,
 body.auth-page[data-theme="light"] .auth-back-link {
     border-color: #728b71;
     color: #fff;
@@ -2428,6 +2431,7 @@ body.auth-page[data-theme="dark"] .room-side-panel h2 {
 body[data-theme="dark"] .game-button,
 body[data-theme="dark"] #side-navigation-menu li,
 body.auth-page[data-theme="dark"] button,
+body.auth-page[data-theme="dark"] .button-like,
 body.auth-page[data-theme="dark"] .auth-back-link {
     border-color: #56636a;
     color: #e4e9e5;
@@ -2575,3 +2579,23 @@ body[data-theme="dark"] .room-dialog .room-code {
 #room-exit-notice[hidden], #retry-room-exit[hidden] { display: none !important; }
 #retry-room-exit { margin-left: .5rem; cursor: pointer; }
 
+
+/* Shared player identity: uploaded image, or a readable initial. */
+.user-avatar { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 40px; height: 40px; overflow: hidden; border-radius: 50%; background: #345746; color: #fff3cf; font: bold 20px Georgia, serif; }
+.user-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.friend-identity, .multiplayer-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.friend-identity > span:last-child { overflow-wrap: anywhere; }
+.multiplayer-identity { justify-content: center; }
+.multiplayer-identity .user-avatar { width: 30px; height: 30px; font-size: 16px; }
+
+.room-player-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.room-player-identity > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.room-player-identity .user-avatar { width: 32px; height: 32px; font-size: 18px; }
+
+/* Put the role below the name so avatars do not squeeze narrow lobby lists. */
+.player-list-item:has(.room-player-identity) { grid-template-columns: 10px minmax(0, 1fr) auto; padding: 8px 9px; row-gap: 3px; }
+.player-list-item:has(.room-player-identity) .player-presence { grid-row: 1 / span 2; }
+.player-list-item .room-player-identity { grid-column: 2; grid-row: 1; }
+.room-player-identity > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-list-item:has(.room-player-identity) .player-role { grid-column: 2; grid-row: 2; padding-left: 42px; }
+.player-list-item:has(.room-player-identity) .remove-player-button { grid-column: 3; grid-row: 1 / span 2; }

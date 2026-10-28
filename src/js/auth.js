@@ -1,4 +1,6 @@
-import { fetchCurrentUser } from "./current-user.js";
+import { createProfileStatistics } from "./statistics.js";
+import { renderAvatar } from "./avatar.js";
+import { fetchCurrentUser, setCurrentAccount, getCachedProfile } from "./current-user.js";
 const loginForm = document.querySelector("#login-form");
 const registerForm = document.querySelector("#register-form");
 const account = document.querySelector("#account");
@@ -6,16 +8,54 @@ const message = document.querySelector("#auth-message");
 const usernameForm = document.querySelector("#username-form");
 const passwordForm = document.querySelector("#password-form");
 const deleteAccountForm = document.querySelector("#delete-account-form");
+const profileStatistics = createProfileStatistics(document.querySelector("#profile-statistics"));
 let busy = false;
+let currentUser = null;
+let accountVerified = false;
+let pendingFile = null;
+let previewUrl = null;
+const avatarFile = document.querySelector("#avatar-file");
+const avatarMessage = document.querySelector("#avatar-message");
+
+function syncAvatarControls() {
+  document.querySelector("#avatar-save").disabled = busy || !accountVerified || !pendingFile;
+  document.querySelector("#avatar-cancel").hidden = !pendingFile;
+  document.querySelector("#avatar-remove").hidden = !currentUser?.avatar;
+}
+function clearAvatarSelection() {
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
+  pendingFile = null;
+  avatarFile.value = "";
+}
+function renderProfileImages() {
+  renderAvatar(document.querySelector("#profile-avatar"), currentUser, previewUrl);
+  renderAvatar(document.querySelector("#avatar-preview"), currentUser, previewUrl);
+  document.querySelector("#avatar-file-name").textContent = pendingFile
+    ? `${pendingFile.name} · vēl nav saglabāts`
+    : currentUser?.avatar ? "Tava pašreizējā profila bilde" : "Izvēlies savu profila bildi.";
+  syncAvatarControls();
+}
+function resetAccount() {
+  profileStatistics.clear();
+  accountVerified = false;
+  setCurrentAccount(null);
+  currentUser = null;
+  clearAvatarSelection();
+  avatarMessage.textContent = "";
+  document.querySelector("#auth-panel").classList.remove("is-account");
+}
+
 
 function setBusy(value) {
   busy = value;
   document.querySelectorAll("#auth-panel button, #auth-panel input").forEach((control) => {
-    control.disabled = value;
+    control.disabled = value || (!accountVerified && Boolean(control.closest("#account")));
   });
   document
     .querySelector("#auth-panel")
     .setAttribute("aria-busy", String(value));
+  syncAvatarControls();
 }
 
 async function request(endpoint, options) {
@@ -64,7 +104,12 @@ function formatBanTime(banExpiresAt) {
   return parts.join(" ");
 }
 
-function showAccount(user) {
+function showAccount(user, announce = true, verified = true) {
+  accountVerified = verified;  if (announce) setCurrentAccount(user);
+  currentUser = user;
+  if (verified) void profileStatistics.load(user.id);
+  document.querySelector("#auth-panel").classList.add("is-account");
+  renderProfileImages();
   loginForm.hidden = true;
   registerForm.hidden = true;
   document.querySelector(".auth-tabs").hidden = true;
@@ -146,6 +191,7 @@ document.querySelector("#logout").addEventListener("click", async () => {
   try {
     await request("/api/auth/logout", { method: "POST" });
     account.hidden = true;
+    resetAccount();
     document.querySelector(".auth-tabs").hidden = false;
     loginForm.hidden = false;
     document.querySelector("#show-login").setAttribute("aria-pressed", "true");
@@ -175,7 +221,7 @@ usernameForm.addEventListener("submit", async (event) => {
         username,
       }),
     });
-    document.querySelector("#current-username").textContent = result.user.username;
+    showAccount(result.user);
     usernameForm.reset();
     showMessage("Lietotājvārds veiksmīgi nomainīts.");
   } catch (error) {
@@ -231,6 +277,7 @@ deleteAccountForm.addEventListener("submit", async (event) => {
       }),
     });
     account.hidden = true;
+    resetAccount();
     document.querySelector(".auth-tabs").hidden = false;
     loginForm.hidden = false;
     document.querySelector("#show-login").setAttribute("aria-pressed", "true");
@@ -244,15 +291,80 @@ deleteAccountForm.addEventListener("submit", async (event) => {
   }
 });
 
-setBusy(true);
-fetchCurrentUser()
-  .then((response) => {
-    if (response.status === 401) return null;
+avatarFile.addEventListener("change", () => {
+  const file = avatarFile.files[0];
+  if (!file) return;
+  clearAvatarSelection();
+  avatarMessage.textContent = "";
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size) {
+    avatarMessage.textContent = "Izvēlies JPG, PNG vai WebP attēlu līdz 5 MB.";
+    renderProfileImages();
+    return;
+  }
+  pendingFile = file;
+  previewUrl = URL.createObjectURL(file);
+  renderProfileImages();
+});
+document.querySelector("#avatar-cancel").addEventListener("click", () => {
+  clearAvatarSelection();
+  avatarMessage.textContent = "";
+  renderProfileImages();
+});
+async function saveAvatar(remove = false) {
+  if (busy || (!remove && !pendingFile)) return;
+  setBusy(true);
+  avatarMessage.textContent = remove ? "Noņem bildi…" : "Saglabā bildi…";
+  try {
+    const result = await request("/api/auth/avatar", remove ? { method: "DELETE" } : {
+      method: "PUT", headers: { "Content-Type": pendingFile.type }, body: pendingFile,
+    });
+    clearAvatarSelection();
+    showAccount(result.user);
+    avatarMessage.textContent = remove ? "Profila bilde noņemta." : "Profila bilde saglabāta.";
+  } catch (error) {
+    avatarMessage.textContent = error.message || "Neizdevās saglabāt bildi. Mēģini vēlreiz.";
+  } finally {
+    setBusy(false);
+  }
+}
+document.querySelector("#avatar-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveAvatar();
+});
+document.querySelector("#avatar-remove").addEventListener("click", () => saveAvatar(true));
+
+const accountLoading = document.querySelector("#account-loading");
+const retryAccount = document.querySelector("#retry-account");
+async function loadAccount(refresh = false) {
+  const cached = getCachedProfile();
+  if (account.hidden && cached) showAccount(cached, false, false);
+  setBusy(true);
+  showMessage("");
+  accountLoading.textContent = account.hidden ? "Ielādē kontu…" : "Atjauno profilu…";
+  accountLoading.hidden = false;
+  retryAccount.hidden = true;
+  try {
+    const response = await fetchCurrentUser({ refresh });
+    if (response.status === 401) {
+      account.hidden = true;
+      resetAccount();
+      document.querySelector(".auth-tabs").hidden = false;
+      loginForm.hidden = false;
+      return;
+    }
     if (!response.ok) throw new Error("Session check failed");
-    return response.json();
-  })
-  .then((result) => {
-    if (result?.user) showAccount(result.user);
-  })
-  .catch(() => showMessage("Neizdevās pārbaudīt pieslēgšanās statusu."))
-  .finally(() => setBusy(false));
+    const result = await response.json();
+    if (!result?.user) throw new Error("Missing account");
+    showAccount(result.user, false);
+  } catch {
+    showMessage(account.hidden
+      ? "Neizdevās ielādēt kontu. Mēģini vēlreiz."
+      : "Redzams iepriekš ielādētais profils. Neizdevās pārbaudīt sesiju; pirms rediģēšanas mēģini vēlreiz.");
+    retryAccount.hidden = false;
+  } finally {
+    accountLoading.hidden = true;
+    setBusy(false);
+  }
+}
+retryAccount.addEventListener("click", () => { if (!busy) void loadAccount(true); });
+void loadAccount();

@@ -5,8 +5,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Noteikumi | DuraKlash</title>
         <link rel="stylesheet" href="./main.css">
+        <link rel="stylesheet" href="./modern.css">
     </head>
     <body class="auth-page">
+        <script>
+            try {
+                const theme = localStorage.getItem("durak-theme");
+                if (["classic", "light", "dark", "modern"].includes(theme)) document.body.dataset.theme = theme;
+            } catch { /* Default theme remains usable when storage is disabled. */ }
+        </script>
         <a class="auth-back-link" href="./index.html" aria-label="Atpakaļ uz sākumu">Atpakaļ</a>
         <main id="auth-panel" class="content-panel rules-panel">
             <header class="auth-header">

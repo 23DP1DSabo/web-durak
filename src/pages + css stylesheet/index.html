@@ -9,8 +9,15 @@
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" type="text/css" href="./main.css">
+        <link rel="stylesheet" href="./modern.css">
     </head>
     <body>
+        <script>
+            try {
+                const theme = localStorage.getItem("durak-theme");
+                if (["classic", "light", "dark", "modern"].includes(theme)) document.body.dataset.theme = theme;
+            } catch { /* Default theme remains usable when storage is disabled. */ }
+        </script>
         <div id="frontpage-content">
             <div id="frontpage-matchmaking">
                 <header class="matchmaking-header">
@@ -37,6 +44,7 @@
             </div>
             <nav id="side-navigation-menu">
                 <li><a id="account-link" href="./auth.html">Pieslēgties</a></li>
+                <li id="history-nav-item" hidden><a href="./history.html">Spēļu vēsture</a></li>
                 <li id="friends-nav-item" hidden><a href="./friends.html">Draugi</a></li>
                 <li id="admin-nav-item" hidden><button id="admin-users-open" type="button">Administrēšana</button></li>
                 <li><a href="./rules.html">Noteikumi</a></li>

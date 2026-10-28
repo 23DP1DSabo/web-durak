@@ -1,3 +1,4 @@
+import { renderAvatar } from "./avatar.js";
 import { queueRoomExit } from "./room-exit.js";
 import { io } from "socket.io-client";
 import { attachCardDrag, dropMove } from "./card-drag.js";
@@ -216,7 +217,7 @@ export function startTable({ connection: localConnection = null } = {}) {
     const turn = state.players.find((p) => p.id === state.actor);
     $("#match-mode").textContent = modeNames[state.mode] || state.mode;
     $("#match-player-name").textContent = self.name;
-    $(".player-avatar").textContent = self.name.charAt(0).toUpperCase();
+    renderAvatar($(".player-avatar"), self);
     $("#game-status").textContent = state.result
       ? resultMessage()
       : self.out
@@ -265,7 +266,12 @@ export function startTable({ connection: localConnection = null } = {}) {
         back.setAttribute("aria-hidden", "true");
         cards.append(back);
       }
-      seat.append(name, detail, clock, cards);
+      const identity = document.createElement("div");
+      identity.className = "multiplayer-identity";
+      const avatar = document.createElement("span");
+      renderAvatar(avatar, p);
+      identity.append(avatar, name);
+      seat.append(identity, detail, clock, cards);
       opponents.append(seat);
     }
     const hand = $("#player-hand");

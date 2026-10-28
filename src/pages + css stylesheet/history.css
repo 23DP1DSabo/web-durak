@@ -1,0 +1,31 @@
+.history-page #auth-panel { width: min(100%, 1040px); }
+.history-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.history-heading :is(h2, h3) { margin: 0; }
+.history-heading a, #history-login { color: var(--paper, #f5efdc); text-underline-offset: 4px; }
+.history-note, .history-meta { line-height: 1.6; }
+#history-list { padding: 0; margin: 28px 0; list-style: none; display: grid; gap: 20px; }
+.history-card { min-width: 0; }
+.history-result { display: inline-block; padding: 7px 12px; border: 1px solid currentColor; border-radius: 8px; font-size: 15px; font-weight: bold; }
+.result-win { color: #bfe8b2; }
+.result-durak { color: #ffbbb0; }
+.result-draw { color: #f2d696; }
+.history-players { list-style: none; padding: 0; display: grid; gap: 10px; }
+.history-players li { display: flex; justify-content: space-between; gap: 16px; border-top: 1px solid #e8d8ad40; padding-top: 10px; }
+.history-players li span:first-child { overflow-wrap: anywhere; min-width: 0; }
+.history-players li span:last-child { flex-shrink: 0; }
+.profile-statistics { margin: 0 0 26px; }
+.statistics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 26px 0; }
+.statistics-grid dt { font-size: 14px; line-height: 1.4; }
+.statistics-grid dd { margin: 10px 0 0; font-size: clamp(26px, 3vw, 38px); font-weight: bold; }
+[data-stat-status]:empty { display: none; }
+body[data-theme="light"] :is(.history-heading a, #history-login) { color: #35543a; }
+body[data-theme="light"] .result-win { color: #27602f; }
+body[data-theme="light"] .result-durak { color: #9b3428; }
+body[data-theme="light"] .result-draw { color: #73551e; }
+body[data-theme="light"] .history-players li { border-color: #c5d0bd; }
+body[data-theme="modern"] :is(.history-heading a, #history-login) { color: var(--modern-gold); }
+@media (max-width: 700px) {
+  body.history-page { padding: 88px 18px 24px; }
+  .statistics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .history-heading { align-items: flex-start; }
+}

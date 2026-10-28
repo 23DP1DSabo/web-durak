@@ -190,3 +190,69 @@ pielāgotas attālinātai DB; noklusējumus skatīt `lib/prisma.ts`.
 
 Lokālam salīdzinājumam PowerShell: `$env:DURAK_BENCHMARK="1"; npm run test:multiplayer:db`.
 Tas izvada darbību laikus; tie ir atkarīgi no tīkla un DB atrašanās vietas.
+
+
+### Profila bilde
+
+Konta lapā var izvēlēties JPG, PNG vai WebP attēlu (līdz 5 MB un 20 megapikseļiem),
+apskatīt priekšskatījumu un nospiest **Saglabāt bildi**. Izvēli var atcelt, bet saglabāto
+bildi — noņemt. Attēls tiek apgriezts kvadrātā no centra un saglabāts 512 × 512 WebP
+formātā bez sākotnējā faila metadatiem. Animēti attēli netiek pieņemti.
+
+Bildes glabājas kopīgās MySQL datubāzes tabulā `Profilu_atteli`; lietotāja `avatars`
+lauks satur tikai attēla API adresi. Tās nav atkarīgas no servera lokālajiem failiem.
+Bildes redzamas profilā, draugu sarakstā, istabā un multiplayer spēlē. Konta dzēšana
+izdzēš arī tā bildi. Pēc šī atjauninājuma palaid `npm ci`, `npm run db:generate` un
+`npm run db:migrate`, pēc tam pārstartē serveri.
+
+
+### Tēmas un navigācijas ielāde
+
+Izvēlētā tēma uzreiz saglabājas `localStorage` un tiek piemērota pirms lapas satura
+attēlošanas. Pieslēgta lietotāja izvēle fonā saglabājas arī DB, lai darbotos citās
+ierīcēs. Nepabeigtu saglabāšanu pārņem nākamā lapa; `temas_versija` pasargā jaunāko
+izvēli no novēlotiem vecās lapas pieprasījumiem. Viesu izvēle paliek pārlūkā.
+
+Navigācija izmanto līdz piecām minūtēm derīgu `sessionStorage` priekšskatījumu
+(tikai ID, lietotājvārds un loma), kamēr fonā pārbauda sesiju. Tas nepiešķir
+piekļuves tiesības: serveris joprojām pārbauda katru aizsargāto API pieprasījumu.
+Izrakstīšanās un nederīga sesija šo priekšskatījumu notīra.
+
+Pēc atjauninājuma palaid `npm run db:generate`, `npm run db:migrate` un pārstartē serveri.
+
+
+Profila lapai ir atsevišķs, līdz piecām minūtēm derīgs `sessionStorage`
+priekšskatījums: lietotājvārds, vārds, e-pasts, bildes adrese un konta tēmas dati.
+To atjauno sekmīga konta pārbaude un profila izmaiņas. Tas ļauj uzreiz parādīt
+profilu, kamēr sesiju pārbauda fonā. Līdz pārbaudei rediģēšana ir atspējota.
+Izrakstoties, dzēšot kontu vai saņemot 401, abi konta priekšskatījumi tiek notīrīti.
+Paroles un sesijas atslēgas pārlūka glabātuvē netiek saglabātas.
+
+
+### Modernā tēma
+
+Sadaļā **Tēmas → Modernā** pieejams tumši zaļš noformējums ar noapaļotiem paneļiem
+un zeltainām pogām, balstīts uz sākotnējo atjaunotā profila izskatu. Tas darbojas
+sākumlapā, profilā, draugu un iestatījumu sadaļās, istabā un spēlē.
+Izvēle tūlīt saglabājas pārlūkā, bet pieslēgtam lietotājam — arī kontā (`MODERN`).
+Pēc atjauninājuma palaid `npm run db:generate`, `npm run db:migrate` un pārstartē serveri.
+
+
+### Spēļu vēsture un profila statistika
+
+Pieslēgtam lietotājam sākumlapā pieejama **Spēļu vēsture**, bet profilā — spēļu,
+uzvaru, zaudējumu skaits un uzvaru procentuālā daļa no visām kārtām.
+Uzskaita tikai servera pabeigtās multiplayer kārtas; revanšs ir jauna kārta.
+Spēles pret botu, nepabeigtas spēles un aizvērtas gaidīšanas istabas neieskaitās.
+Vēsture ielādējas pa 20 ierakstiem, bet statistiku DB apkopo atsevišķi no profila.
+
+Pēc koda atjaunināšanas palaid `npm run db:generate`, `npm run db:migrate` un
+pārstartē serveri. Migrācija `20261028030000_match_history` izveido kārtu un to
+dalībnieku tabulas, kā arī pārnes saglabātos pabeigto multiplayer spēļu rezultātus.
+Iepriekš ar revanšu pārrakstītas kārtas atjaunot nav iespējams.
+Jaunas kārtas rezultāts un vēsture saglabājas vienā transakcijā; atkārtots
+pabeigšanas pieprasījums nerada dublikātu. Konta dzēšana atsaista vēstures
+dalībnieku no lietotāja, saglabājot anonīmu rezultātu.
+
+API `GET /api/me/history?before=<cursor>` un `GET /api/me/statistics` atgriež tikai
+sesijas lietotāja datus. Vēsturē netiek izpausti e-pasti, sesijas vai kārtis.

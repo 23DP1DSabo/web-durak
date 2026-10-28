@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spēļu vēsture | DuraKlash</title>
+    <link rel="stylesheet" href="./main.css">
+        <link rel="stylesheet" href="./modern.css">
+    <link rel="stylesheet" href="./history.css">
+</head>
+<body class="auth-page history-page">
+        <script>
+            try {
+                const theme = localStorage.getItem("durak-theme");
+                if (["classic", "light", "dark", "modern"].includes(theme)) document.body.dataset.theme = theme;
+            } catch { /* Default theme remains usable when storage is disabled. */ }
+        </script>
+    <a class="auth-back-link" href="./index.html" aria-label="Atpakaļ uz sākumu">
+        Atpakaļ
+    </a>
+
+    <main id="auth-panel" class="content-panel">
+        <header class="auth-header">
+            <h1>DuraKlash</h1>
+        </header>
+
+        <div class="history-heading"><h2>Spēļu vēsture</h2><a href="./auth.html">Mans profils →</a></div>
+        <p class="history-note">Tavas pabeigtās multiplayer kārtas, sākot ar jaunākajām. Spēles pret botu šeit netiek uzskaitītas.</p>
+        <p id="history-status" role="status" aria-live="polite">Ielādē spēļu vēsturi…</p>
+        <a id="history-login" href="./auth.html" hidden>Pieslēgties</a>
+        <ol id="history-list" aria-label="Pabeigtās spēles"></ol>
+        <button id="history-more" type="button" hidden>Ielādēt vēl</button>
+    </main>
+    <script type="module" src="../js/history.js"></script>
+    <script type="module" src="../js/theme.js"></script>
+</body>
+</html>

@@ -1,25 +1,27 @@
-import { fetchCurrentUser } from "./current-user.js";
-const themes = new Set(["classic", "light", "dark"]);
-const storageKey = "durak-theme";
-
-export function setTheme(theme) {
-  const normalizedTheme = typeof theme === "string" ? theme.toLowerCase() : "";
-  if (!themes.has(normalizedTheme)) return false;
-
-  document.body.dataset.theme = normalizedTheme;
-  localStorage.setItem(storageKey, normalizedTheme);
-  return true;
-}
-
-const savedTheme = localStorage.getItem(storageKey);
-setTheme(themes.has(savedTheme) ? savedTheme : "classic");
-
-fetchCurrentUser()
-  .then(async (response) => {
-    if (!response.ok) return;
-    const { user } = await response.json();
-    setTheme(user.theme);
-  })
-  .catch(() => {
-    // Keep the saved theme available when the account service is offline.
-  });
+import { fetchCurrentUser, getCachedAccount } from "./current-user.js";
+import { createThemeSync, themeKey, pendingThemeKey } from "./theme-sync.js";
+const controller = createThemeSync({
+  storage: { getItem: (key) => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value), removeItem: (key) => localStorage.removeItem(key) },
+  fetchUser: fetchCurrentUser,
+  cachedAccount: getCachedAccount,
+  save: (theme, expectedVersion) => fetch("/api/auth/theme", {
+    method: "PATCH", credentials: "same-origin", keepalive: true,
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ theme, expectedVersion }),
+  }),
+  apply: (theme) => {
+    document.body.dataset.theme = theme;
+    document.querySelectorAll('input[name="theme"]').forEach((input) => { input.checked = input.value === theme.toUpperCase(); });
+  },
+  status: (state) => window.dispatchEvent(new CustomEvent("durak-theme-status", { detail: state })),
+});
+export const setTheme = (theme) => controller.select(theme);
+void controller.sync();
+window.addEventListener("online", () => void controller.sync());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) { controller.displayStored(); void controller.sync(); }
+});
+window.addEventListener("storage", (event) => {
+  if (event.key === themeKey) controller.displayStored();
+  if (event.key === pendingThemeKey && event.newValue) void controller.sync();
+});
+window.addEventListener("durak-account-changed", (event) => controller.accountChanged(event.detail));

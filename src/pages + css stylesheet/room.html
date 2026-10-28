@@ -6,8 +6,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Spēles istaba | DuraKlash</title>
         <link rel="stylesheet" href="./main.css">
+        <link rel="stylesheet" href="./modern.css">
     </head>
     <body class="auth-page room-page">
+        <script>
+            try {
+                const theme = localStorage.getItem("durak-theme");
+                if (["classic", "light", "dark", "modern"].includes(theme)) document.body.dataset.theme = theme;
+            } catch { /* Default theme remains usable when storage is disabled. */ }
+        </script>
         <a class="auth-back-link" id="leave-room" href="/">Atpakaļ uz sākumu</a>
         <main class="room-layout">
             <p id="room-loading" class="room-description" role="status" aria-live="polite">Ielādē istabu...</p>

@@ -1,3 +1,4 @@
+import { renderAvatar } from "./avatar.js";
 import { queueRoomExit } from "./room-exit.js";
 import { takeRoomHandoff } from "./room-handoff.js";
 
@@ -178,6 +179,7 @@ function renderRoom() {
 
     const name = document.createElement("span");
     name.textContent = player.name;
+    name.title = player.name;
 
     const roleBadge = document.createElement("span");
     roleBadge.className = "player-role";
@@ -190,7 +192,12 @@ function renderRoom() {
           ? "Izveidotājs"
           : "Spēlētājs";
 
-    item.append(presence, name, roleBadge);
+    const avatar = document.createElement("span");
+    renderAvatar(avatar, player);
+    const identity = document.createElement("span");
+    identity.className = "room-player-identity";
+    identity.append(avatar, name);
+    item.append(presence, identity, roleBadge);
 
     if (isHost && player.role !== "host" && room.status === "waiting") {
       const removeButton = document.createElement("button");
