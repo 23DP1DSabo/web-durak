@@ -48,6 +48,15 @@ body[data-theme="modern"] .time-limit-options input:checked + span {
   box-shadow: inset 0 0 0 1px var(--modern-gold);
 }
 body[data-theme="modern"] .theme-options label span { padding: 16px; }
+body[data-theme="modern"] #frontpage-menu-toggle {
+  border: 1px solid var(--modern-line);
+  border-radius: 12px;
+  background: var(--modern-card);
+  color: var(--modern-gold);
+  box-shadow: none;
+}
+body[data-theme="modern"] #frontpage-menu-toggle:hover { background: #294b3a; }
+body[data-theme="modern"] #frontpage-menu-toggle[aria-expanded="true"] { border-color: var(--modern-gold); }
 body[data-theme="modern"] #side-navigation-menu li {
   border: 1px solid var(--modern-line);
   border-radius: 10px;
@@ -97,7 +106,7 @@ body[data-theme="modern"] .room-code { color: var(--modern-gold); background: va
 body[data-theme="modern"] .room-setting-option input[type="checkbox"] { border-color: var(--modern-line); background: var(--modern-bg); }
 body[data-theme="modern"] .room-setting-option input[type="checkbox"]:checked { border-color: var(--modern-gold); background: #345746; }
 body[data-theme="modern"] .game-table-header { background: var(--modern-panel); border-color: var(--modern-line); box-shadow: none; }
-body[data-theme="modern"] .player-clock { border: 1px solid var(--modern-line); border-radius: 12px; background: var(--modern-card); color: var(--modern-text); box-shadow: none; }
+body[data-theme="modern"] :is(.player-clock, .player-status-bar #game-status) { border: 1px solid var(--modern-line); border-radius: 12px; background: var(--modern-card); color: var(--modern-text); box-shadow: none; }
 body[data-theme="modern"] .player-clock time { color: var(--modern-gold); }
 body[data-theme="modern"] .player-clock.is-low { border-color: #e3957b; }
 body[data-theme="modern"] .player-clock.is-low time { color: #ffb8a7; }
@@ -126,4 +135,6 @@ body.profile-page[data-theme="modern"] #account button { font-size: 14px; }
   body.profile-page[data-theme="modern"] #profile-avatar { width: 80px; height: 80px; font-size: 32px; }
   body.profile-page[data-theme="modern"] #account-title { font-size: 28px; }
   body[data-theme="modern"] :is(#auth-panel, #side-navigation-menu, .game-rooms, .room-side-panel) { border-radius: 18px; }
+  /* The menu slides in from the right edge, so only its open side is rounded. */
+  body[data-theme="modern"] #side-navigation-menu { border-right: 0; border-radius: 18px 0 0 18px; }
 }

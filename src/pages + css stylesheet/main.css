@@ -2433,9 +2433,10 @@ body.game-table-page[data-theme="light"] .play-surface #game-status {
 }
 
 body.game-table-page[data-theme="light"] .player-status-bar #game-status {
-    border-color: #a6b6a1;
+    border-color: #829982;
     color: #263d2e;
-    background: rgb(248 250 245 / 92%);
+    background: #f8faf5;
+    background-image: none;
 }
 
 body.game-table-page[data-theme="light"] .game-exit-link,
@@ -2475,11 +2476,17 @@ body.game-table-page[data-theme="dark"] .player-clock time {
     text-shadow: none;
 }
 
-body.game-table-page[data-theme="dark"] .play-surface #game-status,
-body.game-table-page[data-theme="dark"] .player-status-bar #game-status {
+body.game-table-page[data-theme="dark"] .play-surface #game-status {
     border-color: #46525a;
     color: #e4e9e5;
     background: rgb(32 40 46 / 92%);
+}
+
+body.game-table-page[data-theme="dark"] .player-status-bar #game-status {
+    border-color: #56636a;
+    color: #e4e9e5;
+    background: #273238;
+    background-image: none;
 }
 
 body.game-table-page[data-theme="dark"] .game-exit-link,
@@ -3094,3 +3101,642 @@ body[data-theme="dark"] .room-dialog .room-code {
 .room-player-identity > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-list-item:has(.room-player-identity) .player-role { grid-column: 2; grid-row: 2; padding-left: 42px; }
 .player-list-item:has(.room-player-identity) .remove-player-button { grid-column: 3; grid-row: 1 / span 2; }
+
+/* ==========================================================================
+   Game table sizing
+   Card sizes follow both screen width and height, so every screen gets the
+   largest cards that fit. The phone layouts below only change these variables.
+   ========================================================================== */
+
+.game-table-page {
+    --hand-card-w: clamp(54px, min(6.3vw, 10.5svh), 88px);
+    --table-card-w: clamp(58px, min(6.5vw, 10svh), 84px);
+}
+
+.drag-table .player-hand .hand-card {
+    width: var(--hand-card-w);
+}
+
+.played-card-pair {
+    --played-card-width: var(--table-card-w);
+}
+
+.card-drop-zone {
+    box-sizing: border-box;
+    width: calc(var(--table-card-w) + 20px);
+    min-height: calc(var(--table-card-w) * 1.45 + 16px);
+}
+
+/* Name and hand get their own columns, so a big hand wraps instead of covering the name. */
+.drag-table .player-seat {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) minmax(0, max-content) minmax(150px, 1fr);
+    align-items: center;
+    column-gap: 16px;
+}
+
+.drag-table .player-seat .seat-identity {
+    position: static;
+    grid-column: 1;
+    justify-self: end;
+    width: auto;
+    max-width: 100%;
+    transform: none;
+}
+
+.drag-table .player-seat .player-hand {
+    grid-column: 2;
+    width: auto;
+}
+
+/* The turn indicator wears the same frame as the clock beside it. */
+.player-status-bar {
+    align-items: stretch;
+}
+
+.player-status-bar #game-status {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 142px;
+    padding: 7px 15px;
+    border: 2px ridge #9b7140;
+    border-radius: 0;
+    color: #fff2ce;
+    background: linear-gradient(rgb(23 10 3 / 43%), rgb(23 10 3 / 43%)), url("../images/long-wood.jpg") center / cover;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 35%), inset 0 0 0 1px rgb(242 207 141 / 35%);
+    font: 700 15px/1.2 Georgia, "Palatino Linotype", serif;
+}
+
+/* ==========================================================================
+   Phone layout
+   Loaded last on purpose: these rules tighten the older mobile rules above.
+   Sizes and layout only, so every theme keeps its own colours.
+   ========================================================================== */
+
+@media (max-width: 700px) {
+    /* Menus: smaller frames and titles, same readable text size. */
+    #frontpage-content {
+        grid-template-columns: 44px minmax(0, 1fr);
+        grid-template-rows: 44px minmax(0, 1fr);
+        gap: 14px 10px;
+        padding: 14px 14px 20px;
+    }
+
+    #frontpage-menu-toggle {
+        width: 44px;
+        height: 44px;
+    }
+
+    .matchmaking-header h1 {
+        font-size: clamp(26px, 8vw, 34px);
+    }
+
+    /* The two room lists share the screen height; buttons grow with it, up to a point. */
+    #matchmaking-mode-selection {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .game-rooms {
+        flex: 1 1 0;
+        justify-content: flex-start;
+        gap: 10px;
+        min-height: 0;
+        padding: 16px 14px 18px;
+    }
+
+    .game-rooms .game-button {
+        flex: 1 1 0;
+        max-height: 92px;
+    }
+
+    .game-rooms h2 {
+        margin: 0 0 4px;
+        padding: 0 0 8px;
+        font-size: 19px;
+    }
+
+    .game-button {
+        min-height: 50px;
+        padding: 10px 44px 10px 14px;
+        font-size: 16px;
+    }
+
+    .game-button::after {
+        right: 14px;
+        font-size: 20px;
+    }
+
+    .auth-page,
+    .room-page {
+        padding: 62px 12px 16px;
+    }
+
+    .auth-back-link {
+        top: 12px;
+        left: 12px;
+        min-height: 38px;
+        padding: 5px 12px;
+        font-size: 13px;
+    }
+
+    #auth-panel,
+    .rules-panel,
+    .settings-panel,
+    .room-center-panel#auth-panel {
+        padding: 18px 14px;
+    }
+
+    .auth-header h1 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        text-shadow: 2px 3px 0 #0b2118;
+    }
+
+    .rules-sections,
+    #account-settings {
+        gap: 12px;
+    }
+
+    .rules-section,
+    .settings-section,
+    .placeholder-section {
+        padding: 14px;
+    }
+
+    .room-lobby {
+        gap: 12px;
+    }
+
+    .room-code {
+        margin: 10px 0 14px;
+        padding: 10px;
+        font-size: 28px;
+    }
+
+    .room-code-actions {
+        gap: 8px;
+        margin: 10px 0 6px;
+    }
+
+    .room-side-panel {
+        padding: 14px;
+    }
+
+    .room-side-panel h2 {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        font-size: 18px;
+    }
+
+    .time-limit-options {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin: 12px 0 10px;
+    }
+
+    .time-limit-options .no-time-limit-option {
+        grid-column: 1 / -1;
+    }
+
+    .room-setting-option {
+        padding: 9px 6px;
+        font-size: 14px;
+    }
+
+    .admin-users-dialog,
+    .room-dialog {
+        padding: 18px 14px;
+    }
+
+    /* Game table, portrait: one-line header, compact info, bigger cards to tap. */
+    .game-table-header {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        min-height: 0;
+        padding: 8px 12px;
+    }
+
+    .game-brand {
+        display: none;
+    }
+
+    .match-details {
+        grid-column: 1;
+        grid-row: 1;
+        justify-self: start;
+        gap: 4px 8px;
+        text-align: left;
+    }
+
+    .game-exit-link {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .table-stage,
+    .game-table-page.drag-table:has(.multiplayer-opponents) .table-stage {
+        grid-template-rows: min-content min-content minmax(110px, 1fr) min-content auto;
+        gap: 6px;
+        min-height: 0; /* the page is a flex column, so the table fills what the header leaves */
+        padding: 8px 12px 12px;
+    }
+
+    .table-status {
+        justify-content: center;
+        gap: 18px;
+    }
+
+    .trump-indicator {
+        display: flex;
+        gap: 6px;
+    }
+
+    .trump-indicator img {
+        width: 40px;
+    }
+
+    .draw-pile {
+        width: 36px;
+    }
+
+    /* Opponents become compact strips instead of tall tiles. */
+    .multiplayer-seat {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 2px 10px;
+        max-width: none;
+        padding: 5px 12px;
+    }
+
+    .multiplayer-seat p {
+        margin: 0;
+        font-size: 13px;
+    }
+
+    .multiplayer-card-backs {
+        margin: 0;
+    }
+
+    .multiplayer-card-backs .card-back {
+        width: 16px;
+        height: 23px;
+    }
+
+    .drag-table .player-seat .seat-identity {
+        gap: 8px;
+    }
+
+    .drag-table .player-seat .seat-avatar {
+        width: 28px;
+        font-size: 13px;
+    }
+
+    .drag-table .player-seat .seat-identity p {
+        display: none;
+    }
+
+    .drag-table .player-hand {
+        gap: 5px;
+        padding: 14px 0 6px;
+        overflow: visible;
+    }
+
+    /* Six cards (a full starting hand) fit on one row; more cards wrap. */
+    .game-table-page {
+        --hand-card-w: clamp(40px, min(calc((100vw - 49px) / 6), 9svh), 76px);
+        --table-card-w: clamp(46px, min(15vw, 8svh), 70px);
+    }
+
+    .drag-table .player-hand .hand-card {
+        border-radius: 6px;
+    }
+
+    .drag-table .player-seat {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .drag-table .player-seat .seat-identity,
+    .drag-table .player-seat .player-hand {
+        grid-column: 1;
+        justify-self: stretch;
+    }
+
+    .played-card-pair {
+        width: calc(var(--played-card-width) + 18px);
+        height: calc(var(--played-card-width) * 1.45 + 14px);
+    }
+
+    .played-card.defense-card {
+        transform: translate(18px, 14px);
+    }
+
+    .card-drop-zone {
+        width: calc(var(--table-card-w) + 18px);
+        min-height: calc(var(--table-card-w) * 1.45 + 14px);
+    }
+
+    .player-status-bar {
+        gap: 8px;
+    }
+
+    .player-status-bar #game-status {
+        min-width: 0;
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+
+    .player-clock {
+        min-width: 0;
+        padding: 5px 10px;
+    }
+}
+
+/* Game table, phone held sideways: info column on the left, table on the right. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .game-table-page {
+        background-attachment: scroll;
+    }
+
+    .game-table-header {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 12px;
+        min-height: 0;
+        padding: 5px 16px;
+    }
+
+    .game-brand {
+        display: block;
+        font-size: 16px;
+    }
+
+    .match-details {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: center;
+        font-size: 11px;
+    }
+
+    .game-exit-link {
+        grid-column: 3;
+        padding: 5px 10px;
+    }
+
+    .table-stage,
+    .game-table-page.drag-table:has(.multiplayer-opponents) .table-stage {
+        grid-template-columns: 112px minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        gap: 4px 14px;
+        min-height: calc(100svh - 40px);
+        padding: 6px max(16px, env(safe-area-inset-right)) 6px max(16px, env(safe-area-inset-left));
+    }
+
+    .table-status {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        align-self: start;
+        display: grid;
+        gap: 6px;
+        font-size: 11px;
+    }
+
+    .trump-indicator {
+        display: grid;
+        gap: 2px;
+    }
+
+    .trump-indicator img {
+        width: 44px;
+    }
+
+    .draw-pile {
+        width: 38px;
+    }
+
+    .opponent-seat,
+    .play-surface,
+    .player-seat {
+        grid-column: 2;
+    }
+
+    .opponent-seat {
+        grid-row: 1;
+    }
+
+    .play-surface {
+        grid-row: 2;
+        gap: 6px;
+    }
+
+    .player-seat {
+        grid-row: 3;
+    }
+
+    .multiplayer-opponents {
+        gap: 6px;
+    }
+
+    .multiplayer-seat {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: none;
+        padding: 4px 10px;
+    }
+
+    .multiplayer-seat p {
+        margin: 0;
+        font-size: 12px;
+    }
+
+    .multiplayer-card-backs {
+        margin: 0;
+    }
+
+    .multiplayer-card-backs .card-back {
+        width: 16px;
+        height: 23px;
+    }
+
+    .played-cards,
+    .drag-table .played-cards {
+        gap: 6px;
+        min-height: 0;
+    }
+
+    .game-table-page {
+        --hand-card-w: clamp(40px, 12.5svh, 64px);
+        --table-card-w: clamp(38px, 11svh, 58px);
+    }
+
+    .played-card-pair {
+        width: calc(var(--played-card-width) + 14px);
+        height: calc(var(--played-card-width) * 1.45 + 10px);
+    }
+
+    .played-card.defense-card {
+        transform: translate(14px, 10px);
+    }
+
+    .card-drop-zone {
+        width: calc(var(--table-card-w) + 14px);
+        min-height: calc(var(--table-card-w) * 1.45 + 10px);
+        padding: 4px;
+        font-size: 11px;
+    }
+
+    .play-surface::before {
+        height: 90%;
+    }
+
+    .game-actions button {
+        min-height: 34px;
+        padding: 5px 12px;
+    }
+
+    .drag-table .player-seat .seat-identity {
+        display: none;
+    }
+
+    .drag-table .player-seat {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .drag-table .player-seat .player-hand {
+        grid-column: 1;
+    }
+
+    /* Fan the hand so a dozen cards still fit on one row. */
+    .drag-table .player-hand {
+        min-height: 0;
+        gap: 0;
+        row-gap: 6px;
+        padding: 10px 0 0;
+    }
+
+    .drag-table .player-hand .hand-card + .hand-card {
+        margin-left: calc(var(--hand-card-w) * -0.3);
+    }
+
+    .player-status-bar {
+        grid-column: 1;
+        grid-row: 3;
+        flex-direction: column;
+        align-self: end;
+        gap: 4px;
+    }
+
+    .player-status-bar #game-status {
+        min-width: 0;
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+
+    .player-clock {
+        min-width: 0;
+        padding: 4px 8px;
+    }
+
+    .player-clock span {
+        display: none;
+    }
+}
+
+/* Admin users on phones: one card per user instead of a wide table to swipe. */
+@media (max-width: 700px) {
+    .admin-users-table {
+        display: block;
+        min-width: 0;
+    }
+
+    .admin-users-table thead {
+        display: none;
+    }
+
+    .admin-users-table tbody {
+        display: block;
+    }
+
+    .admin-users-table tr {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "avatar name online"
+            "avatar account account"
+            "avatar login login"
+            "actions actions actions";
+        align-items: center;
+        gap: 2px 10px;
+        padding: 12px 2px;
+        border-bottom: 1px solid rgb(150 150 150 / 35%);
+    }
+
+    .admin-users-table tr[hidden] {
+        display: none;
+    }
+
+    .admin-users-table td {
+        display: block;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    .admin-users-table td:nth-child(1) {
+        grid-area: avatar;
+        align-self: start;
+    }
+
+    .admin-users-table td:nth-child(2) {
+        grid-area: name;
+        overflow: hidden;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .admin-users-table td:nth-child(3) {
+        grid-area: online;
+        font-size: 13px;
+    }
+
+    .admin-users-table td:nth-child(4) {
+        grid-area: account;
+        font-size: 14px;
+    }
+
+    .admin-users-table td.admin-user-last-login {
+        grid-area: login;
+        font-size: 13px;
+        white-space: normal;
+        opacity: 0.8;
+    }
+
+    .admin-users-table td.admin-user-last-login::before {
+        content: "Pēdējā pieslēgšanās: ";
+    }
+
+    .admin-users-table td.admin-user-actions-cell {
+        grid-area: actions;
+        min-width: 0;
+        margin-top: 8px;
+    }
+
+    .admin-user-actions {
+        flex-wrap: nowrap;
+    }
+
+    .admin-users-dialog .admin-user-actions select {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .admin-users-dialog .admin-user-actions button {
+        flex: 0 0 auto;
+    }
+}

@@ -228,7 +228,6 @@ export function startTable({ connection: localConnection = null } = {}) {
     $("#match-player-name").textContent = self.name;
     renderAvatar($(".player-avatar"), self);
     $("#player-clock").hidden = !state.timed;
-    $("#opponent-clock").hidden = !state.timed;
     if (!state.timed) {
       $("#match-time-limit").textContent = "Bez laika limita";
     } else if (localConnection) {
