@@ -1,4 +1,5 @@
 import { renderAvatar } from "./avatar.js";
+import { showConfirm } from "./dialogs.js";
 
 const searchForm = document.querySelector("#friend-search-form");
 const usernameInput = document.querySelector("#friend-username");
@@ -122,7 +123,7 @@ async function sendRequest(userId) {
 }
 
 async function removeFriend(friend) {
-    if (!confirm(`Vai tiešām noņemt "${friend.username}" no draugiem?`)) return;
+    if (!(await showConfirm(`Vai tiešām noņemt "${friend.username}" no draugiem?`, { title: "Noņemt draugu", confirmLabel: "Noņemt", danger: true }))) return;
 
     await api(`/api/friends/${encodeURIComponent(friend.id)}`, {
         method: "DELETE",

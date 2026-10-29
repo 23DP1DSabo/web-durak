@@ -21,6 +21,9 @@ import { createRoomsRouter } from "./router/room.js";
 
 export function createAuthApp(prisma) {
   const authApp = express();
+  // Railway's edge proxy forwards every request, so without this req.ip is the
+  // proxy and all visitors share one login rate limit.
+  if (process.env.NODE_ENV === "production") authApp.set("trust proxy", 1);
   const presence = createPresence();
   const sessionDuration = 7 * 24 * 60 * 60 * 1000;
   const scryptAsync = promisify(scrypt);

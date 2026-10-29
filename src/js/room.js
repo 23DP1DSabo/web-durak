@@ -1,5 +1,6 @@
 import { renderAvatar } from "./avatar.js";
 import { queueRoomExit } from "./room-exit.js";
+import { showAlert, showConfirm } from "./dialogs.js";
 import { takeRoomHandoff } from "./room-handoff.js";
 
 const modeNames = {
@@ -416,9 +417,11 @@ async function saveSettings() {
 async function removePlayer(targetId, targetName) {
   if (!isHost || busy || !room || room.status !== "waiting") return;
 
-  if (!confirm(`Vai tiešām izņemt spēlētāju "${targetName}"?`)) {
+  if (!(await showConfirm(`Vai tiešām izņemt spēlētāju "${targetName}"?`, { title: "Izņemt spēlētāju", confirmLabel: "Izņemt", danger: true }))) {
     return;
   }
+  // Unlike confirm(), the modal does not pause polling, so check again.
+  if (busy || !room || room.status !== "waiting") return;
 
   busy = true;
 
@@ -571,8 +574,9 @@ async function initializeRoom() {
     ) {
       redirected = true;
 
-      alert(
+      await showAlert(
         "Šajā istabā viesi bez konta nav atļauti. Lūdzu, piesakieties vai izvēlieties citu istabu.",
+        { title: "Piekļuve liegta" },
       );
 
       window.location.replace("/");

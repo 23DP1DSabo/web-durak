@@ -3193,17 +3193,18 @@ body[data-theme="dark"] .room-dialog .room-code {
     display: grid;
     gap: 12px;
     padding: 14px 16px;
-    border: 2px solid #e2bd70;
-    border-radius: 8px;
-    color: #f5efdc;
-    background: #1f3329;
-    box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+    border: 3px solid #2b190f;
+    outline: 1px solid var(--wood-light);
+    outline-offset: -6px;
+    color: var(--paper-light);
+    background: linear-gradient(rgb(74 43 25 / 86%), rgb(74 43 25 / 86%)), url("../images/broww-wood.jpg") center / cover;
+    box-shadow: 6px 8px 0 rgb(8 20 14 / 42%), inset 0 0 18px rgb(20 10 5 / 38%);
     font: 15px/1.4 Georgia, "Palatino Linotype", serif;
 }
 
 .invite-toast-error {
-    border-color: #d08a7d;
-    background: #4a211b;
+    border-color: #4a1610;
+    background: linear-gradient(rgb(94 30 22 / 88%), rgb(94 30 22 / 88%)), url("../images/broww-wood.jpg") center / cover;
 }
 
 .invite-toast p {
@@ -3219,10 +3220,9 @@ body[data-theme="dark"] .room-dialog .room-code {
 .invite-toasts .invite-toast button {
     min-height: 38px;
     padding: 7px 16px;
-    border: 1px solid #b4c4b7;
-    border-radius: 6px;
-    color: #f5efdc;
-    background: transparent;
+    border: 1px solid #b49762;
+    color: var(--paper-light);
+    background: rgb(43 25 15 / 45%);
     background-image: none;
     box-shadow: none;
     font: 700 14px Georgia, "Palatino Linotype", serif;
@@ -3230,14 +3230,159 @@ body[data-theme="dark"] .room-dialog .room-code {
 }
 
 .invite-toasts .invite-toast button.invite-toast-accept {
-    border-color: #e2bd70;
-    color: #1f2a24;
-    background: #e2bd70;
+    border-left: 5px solid #6b4725;
+    color: #fff0cf;
+    background-image: linear-gradient(rgb(34 12 4 / 26%), rgb(34 12 4 / 26%)), url("../images/juicy-red-wood.jpg");
+    background-position: center;
+    background-size: cover;
+    box-shadow: 2px 3px 0 rgb(25 14 7 / 40%);
+}
+
+.invite-toasts .invite-toast button:hover:not(:disabled) {
+    filter: brightness(1.12);
 }
 
 .invite-toasts .invite-toast button:disabled {
     cursor: wait;
     opacity: 0.6;
+}
+
+body[data-theme="light"] .invite-toast {
+    border: 1px solid #8a9d81;
+    border-radius: 8px;
+    outline: 0;
+    color: #26352a;
+    background: #fffdf7;
+    box-shadow: 0 10px 30px rgb(38 53 42 / 22%);
+}
+
+body[data-theme="light"] .invite-toast-error {
+    border-color: #c98b7f;
+    background: #fbefec;
+}
+
+body[data-theme="light"] .invite-toasts .invite-toast button {
+    border: 1px solid #8a9d81;
+    border-radius: 6px;
+    color: #26352a;
+    background: transparent;
+}
+
+body[data-theme="light"] .invite-toasts .invite-toast button.invite-toast-accept {
+    border-color: #728b71;
+    color: #fff;
+    background: #456b4e;
+    box-shadow: none;
+}
+
+body[data-theme="dark"] .invite-toast {
+    border: 1px solid #46525a;
+    border-radius: 8px;
+    outline: 0;
+    color: #e4e9e5;
+    background: #20282e;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 50%);
+}
+
+body[data-theme="dark"] .invite-toast-error {
+    border-color: #8a5148;
+    background: #3a2422;
+}
+
+body[data-theme="dark"] .invite-toasts .invite-toast button {
+    border: 1px solid #56636a;
+    border-radius: 6px;
+    color: #e4e9e5;
+    background: transparent;
+}
+
+body[data-theme="dark"] .invite-toasts .invite-toast button.invite-toast-accept {
+    color: #e4e9e5;
+    background: #35444b;
+    box-shadow: none;
+}
+
+body[data-theme="modern"] .invite-toast {
+    border: 1px solid var(--modern-line);
+    border-radius: 18px;
+    outline: 0;
+    color: var(--modern-text);
+    background: var(--modern-panel);
+    box-shadow: 0 18px 50px #07160f88;
+    font-family: "Trebuchet MS", Arial, sans-serif;
+}
+
+body[data-theme="modern"] .invite-toast-error {
+    border-color: #975d4f;
+    background: #3b211c;
+}
+
+body[data-theme="modern"] .invite-toasts .invite-toast button {
+    border: 1px solid var(--modern-line);
+    border-radius: 9px;
+    color: var(--modern-text);
+    background: var(--modern-card);
+    font-family: "Trebuchet MS", Arial, sans-serif;
+}
+
+body[data-theme="modern"] .invite-toasts .invite-toast button.invite-toast-accept {
+    border-color: var(--modern-gold);
+    color: #1b2d20;
+    background: var(--modern-gold);
+    box-shadow: none;
+}
+
+/* Alert and confirmation modals from dialogs.js. Theme colours come from .room-dialog. */
+.app-dialog {
+    width: min(100% - 32px, 440px);
+}
+
+.app-dialog h2 {
+    margin: 0 0 14px;
+    font-size: clamp(22px, 4.5vw, 28px);
+}
+
+.app-dialog-message {
+    margin: 0 0 24px;
+    font-size: 17px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.app-dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.app-dialog-actions button {
+    min-width: 110px;
+}
+
+.room-dialog.app-dialog button.app-dialog-cancel {
+    border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+    color: inherit;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+}
+
+.room-dialog.app-dialog button.app-dialog-cancel:hover {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    filter: none;
+    transform: none;
+}
+
+body:is([data-theme="light"], [data-theme="dark"], [data-theme="modern"]) .room-dialog.app-dialog button.app-dialog-danger {
+    border-color: #b96b60;
+    color: #fff;
+    background: #8e342c;
+    background-image: none;
+}
+
+body:is([data-theme="light"], [data-theme="dark"], [data-theme="modern"]) .room-dialog.app-dialog button.app-dialog-danger:hover {
+    background: #a14439;
 }
 
 /* ==========================================================================

@@ -1,5 +1,6 @@
 import { renderAvatar } from "./avatar.js";
 import { queueRoomExit } from "./room-exit.js";
+import { showConfirm } from "./dialogs.js";
 import { io } from "socket.io-client";
 import { attachCardDrag, dropMove } from "./card-drag.js";
 import { sortHand } from "./game-logic.js";
@@ -532,7 +533,9 @@ export function startTable({ connection: localConnection = null } = {}) {
       }
       return location.assign("./index.html");
     }
-    if (!confirm("Pamest spēli un atzīt zaudējumu?")) return;
+    if (!(await showConfirm("Pamest spēli un atzīt zaudējumu?", { title: "Pamest spēli", confirmLabel: "Pamest", danger: true }))) return;
+    // The game keeps running behind the modal and may have ended meanwhile.
+    if (state?.result || state?.players.find((p) => p.id === state.selfId)?.out) return exitTable(event);
     await move("resign");
     if (state?.result || state?.players.find((p) => p.id === state.selfId)?.out)
       location.assign("./index.html");

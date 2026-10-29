@@ -1,5 +1,6 @@
 import { finishRoomExit, initializeRoomExit } from "./room-exit.js";
 import { storeRoomHandoff } from "./room-handoff.js";
+import { showAlert } from "./dialogs.js";
 
 const modeNames = {
   classic: "Klasiskais duraks",
@@ -134,7 +135,7 @@ async function getQuickplayPlayerName() {
 }
 
 function quickplay(mode, button) {
-  return enterRoom("/api/rooms/quickplay", { mode }, button, "Meklē istabu...", (error) => alert(error.message));
+  return enterRoom("/api/rooms/quickplay", { mode }, button, "Meklē istabu...", (error) => showAlert(error.message));
 }
 
 function createRoomCode() {
