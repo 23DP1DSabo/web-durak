@@ -1,5 +1,6 @@
 import { fetchCurrentUser, getCachedAccount } from "./current-user.js";
 import { createThemeSync, themeKey, pendingThemeKey } from "./theme-sync.js";
+import "./presence.js"; // Every page loads theme.js, so the heartbeat runs everywhere.
 const controller = createThemeSync({
   storage: { getItem: (key) => localStorage.getItem(key), setItem: (key, value) => localStorage.setItem(key, value), removeItem: (key) => localStorage.removeItem(key) },
   fetchUser: fetchCurrentUser,

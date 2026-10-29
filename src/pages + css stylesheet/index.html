@@ -183,9 +183,32 @@
                 </table>
             </div>
         </dialog>
+        <dialog id="admin-danger-dialog" class="admin-users-dialog admin-danger-dialog" aria-labelledby="admin-danger-title">
+            <div class="admin-users-header">
+                <h2 id="admin-danger-title">Bīstamās darbības</h2>
+                <button id="admin-danger-close" class="room-dialog-close" type="button">Aizvērt</button>
+            </div>
+            <p>Lietotājs: <strong id="admin-danger-username"></strong></p>
+            <section class="admin-danger-section" aria-labelledby="admin-role-heading">
+                <h3 id="admin-role-heading">Administratora tiesības</h3>
+                <p id="admin-role-description"></p>
+                <button id="admin-role-toggle" class="admin-danger-button" type="button"></button>
+            </section>
+            <section class="admin-danger-section" aria-labelledby="admin-delete-heading">
+                <h3 id="admin-delete-heading">Konta dzēšana</h3>
+                <p id="admin-delete-description"></p>
+                <form id="admin-delete-form">
+                    <label for="admin-delete-confirm">Lai apstiprinātu, ieraksti lietotājvārdu</label>
+                    <input id="admin-delete-confirm" type="text" autocomplete="off" spellcheck="false">
+                    <button id="admin-delete-submit" class="admin-danger-button" type="submit" disabled>Neatgriezeniski dzēst kontu</button>
+                </form>
+            </section>
+            <p id="admin-danger-status" role="status" aria-live="polite"></p>
+        </dialog>
         <script type="module" src="../js/matchmaking.js"></script>
         <script type="module" src="../js/account-status.js"></script>
         <script type="module" src="../js/admin-panel.js"></script>
         <script type="module" src="../js/theme.js"></script>
+        <script type="module" src="../js/invites.js"></script>
     </body>
 </html>

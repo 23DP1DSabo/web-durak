@@ -19,6 +19,7 @@
     "server": "tsx server.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
+    "db:seed-accounts": "tsx prisma/seed-accounts.ts",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",

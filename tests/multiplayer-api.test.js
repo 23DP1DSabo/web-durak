@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { io as client } from "socket.io-client";
 import { createAuthApp } from "../app.js";
@@ -10,6 +11,9 @@ function database() {
     players = [],
     next = 1n,
     queue = Promise.resolve();
+  // Signed-in users for invitation tests; every other test plays as guests.
+  const accounts = [], sessions = new Map(), friendships = [];
+  const account = (id) => accounts.find((a) => a.id === id) ?? null;
   const hydrate = (r) =>
     r
       ? structuredClone({
@@ -17,9 +21,13 @@ function database() {
           players: players
             .filter((p) => p.matchId === r.id)
             .sort((a, b) => Number(a.id - b.id))
-            .map((p) => ({ ...p, user: null })),
+            .map((p) => ({ ...p, user: account(p.userId) })),
         })
       : null;
+  const inMatchWith = (p, filter) => {
+    const status = rooms.find((r) => r.id === p.matchId)?.status;
+    return !filter || (filter.in ? filter.in.includes(status) : status === filter);
+  };
   const matches = (r, w) => Object.entries(w).every(([k, v]) =>
     v && typeof v === "object" && Array.isArray(v.in) ? v.in.includes(r[k]) : r[k] === v);
   const patch = (r, data) => {
@@ -28,14 +36,27 @@ function database() {
         v?.increment !== undefined ? r[k] + v.increment : structuredClone(v);
   };
   const db = {
+    accounts, sessions, friendships,
     history: () => structuredClone(rounds),
+    friendship: {
+      findFirst: async ({ where }) => {
+        const f = friendships.find((f) => f.status === where.status && where.OR.some((pair) =>
+          f.senderId === pair.senderId && f.recipientId === pair.recipientId));
+        return f ? { ...f, sender: account(f.senderId), recipient: account(f.recipientId) } : null;
+      },
+    },
     matchRound: { upsert: async ({ create }) => {
       const existing = rounds.find((round) => round.matchId === create.matchId && +round.startedAt === +create.startedAt);
       if (existing) return existing;
       rounds.push(structuredClone(create));
       return create;
     } },
-    session: { findUnique: async () => null },
+    session: {
+      findUnique: async ({ where }) => {
+        const s = sessions.get(where.tokenHash);
+        return s ? { ...s, tokenHash: where.tokenHash, user: account(s.userId) } : null;
+      },
+    },
     match: {
       create: async ({ data }) => {
         if (rooms.some((r) => r.roomCode === data.roomCode)) {
@@ -65,7 +86,10 @@ function database() {
         rooms
           .filter(
             (r) =>
-              (!where.status || r.status === where.status) &&
+              (!where.status || (where.status.in
+                ? where.status.in.includes(r.status)
+                : r.status === where.status)) &&
+              (!where.createdAt?.lt || r.createdAt < where.createdAt.lt) &&
               (!where.mode || r.mode === where.mode) &&
               (!where.allowGuests || r.allowGuests),
           )
@@ -82,6 +106,11 @@ function database() {
       },
     },
     matchPlayer: {
+      findFirst: async ({ where }) =>
+        players.find((p) => p.userId === where.userId && inMatchWith(p, where.match?.is.status)) ?? null,
+      findMany: async ({ where }) => players
+        .filter((p) => p.userId === where.userId && inMatchWith(p, where.match?.is.status))
+        .map((p) => ({ match: rooms.find((r) => r.id === p.matchId) })),
       updateMany: async ({ where, data }) => {
         const rows = players.filter((p) => matches(p, where));
         for (const p of rows) Object.assign(p, structuredClone(data));
@@ -127,6 +156,7 @@ beforeEach(async () => {
   rt = attachRealtime(server, app.locals.matches, {
     origin: "http://localhost:3000,http://192.168.1.105:3000",
     tickMs: 60000,
+    invites: app.locals.invites,
   });
   sockets = [];
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -287,6 +317,100 @@ test("host authorization uses cookies and starting alone retains solo mode", asy
   const start = await request("/SOLOGAME/start", {}, a.cookie);
   expect(start.body.room.multiplayer).toBe(false);
   expect((await request("/SOLOGAME/finish", {}, a.cookie)).status).toBe(200);
+});
+
+test("rooms nobody has viewed for 10 minutes are closed, except multiplayer games", async () => {
+  await setup();
+  const lobby = await request("/", { code: "LOBBYAAA", mode: "classic", name: "Lobby host" });
+  const solo = await request("/", { code: "BOTGAMEA", mode: "classic", name: "Solo" });
+  await request("/BOTGAMEA/start", {}, solo.cookie);
+  const viewed = await request("/", { code: "VIEWEDAA", mode: "classic", name: "Viewer" });
+  const matches = app.locals.matches;
+  expect(await matches.sweepAbandoned()).toEqual([]); // Restart grace period.
+
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    vi.setSystemTime(Date.now() + 11 * 60 * 1000);
+    expect((await request("/VIEWEDAA", undefined, viewed.cookie, "GET")).status).toBe(200);
+    // An outsider's view does not keep a room alive.
+    await request("/LOBBYAAA", undefined, undefined, "GET");
+    expect((await matches.sweepAbandoned()).sort()).toEqual(["BOTGAMEA", "LOBBYAAA"]);
+    expect((await matches.load("TESTROOM")).status).toBe("ACTIVE");
+    expect((await matches.load("VIEWEDAA")).status).toBe("WAITING");
+    expect((await request("/LOBBYAAA", undefined, lobby.cookie, "GET")).body.room.status).toBe("finished");
+
+    vi.setSystemTime(Date.now() + 11 * 60 * 1000);
+    expect(await matches.sweepAbandoned()).toEqual(["VIEWEDAA"]);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+function signIn(id, username) {
+  const token = createHash("sha256").update(username).digest("hex");
+  db.accounts.push({ id, username, status: "ACTIVE" });
+  db.sessions.set(createHash("sha256").update(token).digest("hex"), {
+    userId: id, expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+  });
+  return `durak_session=${token}; durak_guest=${"0".repeat(63)}${id % 10n}`;
+}
+const nextEvent = (socket, event) => new Promise((resolve) => socket.once(event, resolve));
+async function subscribe(cookie) {
+  const socket = await connect(cookie);
+  const ack = await socket.timeout(3000).emitWithAck("invites:subscribe", {});
+  return { socket, ack };
+}
+
+test("friends are invited live; rejecting notifies the inviter and accepting moves the friend", async () => {
+  const anna = signIn(1001n, "anna"), bob = signIn(1002n, "bob"), cat = signIn(1003n, "cat");
+  db.friendships.push({ senderId: 1001n, recipientId: 1002n, status: "ACCEPTED" });
+  expect((await request("/", { code: "ANNAROOM", mode: "passing", name: "x" }, anna)).status).toBe(201);
+  const invite = (cookie, friendId = "1002") => request("/ANNAROOM/invites", { friendId }, cookie);
+
+  expect((await invite(anna)).body.error).toBe("bob pašlaik nav tiešsaistē.");
+  expect((await invite(anna, "1003")).status).toBe(404); // Not a friend.
+  expect((await invite(undefined)).status).toBe(401); // Guests have no friends.
+  expect((await invite(cat)).status).toBe(403); // Not in the room.
+
+  const inviter = await subscribe(anna);
+  const invitee = await subscribe(bob);
+  expect(invitee.ack).toEqual({ invites: [] });
+  let received = nextEvent(invitee.socket, "invite:received");
+  expect((await invite(anna)).status).toBe(201);
+  const first = await received;
+  expect(first).toMatchObject({ roomCode: "ANNAROOM", mode: "passing", fromName: "anna" });
+  expect((await invite(anna)).status).toBe(409); // Already pending.
+
+  const rejected = nextEvent(inviter.socket, "invite:rejected");
+  const closed = nextEvent(invitee.socket, "invite:closed");
+  expect((await request(`/invites/${first.id}/reject`, {}, bob)).status).toBe(200);
+  expect(await rejected).toEqual({ toName: "bob", roomCode: "ANNAROOM" });
+  expect(await closed).toEqual({ id: first.id });
+  expect((await request(`/invites/${first.id}/accept`, {}, bob)).status).toBe(404);
+
+  // Bob waits in his own lobby; accepting leaves it, which closes it as host.
+  expect((await request("/", { code: "BOBSROOM", mode: "classic", name: "x" }, bob)).status).toBe(201);
+  received = nextEvent(invitee.socket, "invite:received");
+  await invite(anna);
+  const second = await received;
+  expect((await request(`/invites/${second.id}/accept`, {}, anna)).status).toBe(404); // Not theirs.
+  const accepted = await request(`/invites/${second.id}/accept`, {}, bob);
+  expect(accepted.status).toBe(200);
+  expect(accepted.body.room.players.map((p) => p.name)).toEqual(["anna", "bob"]);
+  expect(accepted.body.room.selfId).toBe(accepted.body.room.players[1].id);
+  expect((await app.locals.matches.load("BOBSROOM")).status).toBe("FINISHED");
+  expect((await invite(anna)).body.error).toBe("Draugs jau ir šajā istabā.");
+});
+
+test("friends in an active game are not invited", async () => {
+  const anna = signIn(1001n, "anna"), bob = signIn(1002n, "bob");
+  db.friendships.push({ senderId: 1002n, recipientId: 1001n, status: "ACCEPTED" });
+  await request("/", { code: "ANNAROOM", mode: "classic", name: "x" }, anna);
+  await request("/", { code: "BOTGAMEB", mode: "classic", name: "x" }, bob);
+  await request("/BOTGAMEB/start", {}, bob);
+  await subscribe(bob);
+  const response = await request("/ANNAROOM/invites", { friendId: "1002" }, anna);
+  expect(response.body.error).toBe("bob pašlaik spēlē.");
 });
 
 test("room capacity and host-only settings remain enforced", async () => {

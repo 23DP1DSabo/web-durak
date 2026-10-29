@@ -141,6 +141,15 @@ function renderUsers(users) {
       actionButton.addEventListener("click", () => updateBan(user, duration.value));
     }
     actions.append(duration, actionButton);
+    if (!user.isSelf) {
+      const dangerButton = document.createElement("button");
+      dangerButton.type = "button";
+      dangerButton.className = "admin-danger-button";
+      dangerButton.textContent = "Bīstami…";
+      dangerButton.setAttribute("aria-label", `Tiesības un konta dzēšana: ${user.username}`);
+      dangerButton.addEventListener("click", () => openDangerDialog(user));
+      actions.append(dangerButton);
+    }
     addCell(row, actions, "admin-user-actions-cell");
     userList.append(row);
   }
@@ -239,6 +248,104 @@ async function updateBan(user, duration) {
     return false;
   }
 }
+
+// Role changes and deletion live in a separate dialog: unlike a ban, they
+// cannot simply expire, and deletion cannot be undone at all.
+const dangerDialog = document.querySelector("#admin-danger-dialog");
+const dangerUsername = document.querySelector("#admin-danger-username");
+const dangerStatus = document.querySelector("#admin-danger-status");
+const roleDescription = document.querySelector("#admin-role-description");
+const roleToggle = document.querySelector("#admin-role-toggle");
+const deleteDescription = document.querySelector("#admin-delete-description");
+const deleteForm = document.querySelector("#admin-delete-form");
+const deleteConfirm = document.querySelector("#admin-delete-confirm");
+const deleteSubmit = document.querySelector("#admin-delete-submit");
+let dangerUser = null;
+let roleConfirming = false;
+let dangerBusy = false;
+
+function renderDangerDialog() {
+  const isAdmin = dangerUser.role === "ADMIN";
+  dangerUsername.textContent = dangerUser.username;
+  roleDescription.textContent = isAdmin
+    ? "Lietotājs zaudēs piekļuvi administrēšanai."
+    : dangerUser.status === "ACTIVE"
+      ? "Lietotājs varēs bloķēt, dzēst un mainīt citu lietotāju tiesības."
+      : "Bloķētam lietotājam tiesības piešķirt nevar. Vispirms atbloķē viņu.";
+  const roleLabel = isAdmin ? "Noņemt administratora tiesības" : "Piešķirt administratora tiesības";
+  roleToggle.textContent = roleConfirming ? `Apstiprināt: ${roleLabel.toLocaleLowerCase()}` : roleLabel;
+  roleToggle.disabled = dangerBusy || (!isAdmin && dangerUser.status !== "ACTIVE");
+
+  deleteDescription.textContent = isAdmin
+    ? "Administratora kontu dzēst nevar. Vispirms noņem administratora tiesības."
+    : "Konts, draugu saites, sesijas un profila bilde tiks neatgriezeniski dzēsti. Spēļu rezultāti paliks anonimizēti. Šo darbību nevar atsaukt.";
+  deleteConfirm.disabled = dangerBusy || isAdmin;
+  deleteSubmit.disabled = dangerBusy || isAdmin || deleteConfirm.value !== dangerUser.username;
+}
+
+function openDangerDialog(user) {
+  dangerUser = user;
+  roleConfirming = false;
+  deleteConfirm.value = "";
+  dangerStatus.textContent = "";
+  renderDangerDialog();
+  dangerDialog.showModal();
+}
+
+async function dangerRequest(path, options, failureMessage) {
+  dangerBusy = true;
+  renderDangerDialog();
+  try {
+    const response = await fetch(`/api/admin/users/${encodeURIComponent(dangerUser.id)}${path}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      ...options,
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || failureMessage);
+    dangerDialog.close();
+    await loadUsers();
+    return true;
+  } catch (error) {
+    dangerStatus.textContent = error.message || failureMessage;
+    return false;
+  } finally {
+    dangerBusy = false;
+    if (dangerDialog.open) renderDangerDialog();
+  }
+}
+
+roleToggle.addEventListener("click", async () => {
+  if (!roleConfirming) {
+    roleConfirming = true;
+    renderDangerDialog();
+    return;
+  }
+  roleConfirming = false;
+  const { username, role } = dangerUser;
+  const newRole = role === "ADMIN" ? "USER" : "ADMIN";
+  if (await dangerRequest("/role", {
+    method: "POST", body: JSON.stringify({ role: newRole }),
+  }, "Neizdevās mainīt lietotāja tiesības.")) {
+    status.textContent = newRole === "ADMIN"
+      ? `${username} tagad ir administrators.`
+      : `${username} vairs nav administrators.`;
+  }
+});
+
+deleteConfirm.addEventListener("input", renderDangerDialog);
+deleteForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const { username } = dangerUser;
+  if (deleteConfirm.value !== username) return;
+  if (await dangerRequest("", {
+    method: "DELETE", body: JSON.stringify({ confirmUsername: deleteConfirm.value }),
+  }, "Neizdevās dzēst kontu.")) {
+    status.textContent = `Konts ${username} ir dzēsts.`;
+  }
+});
+
+document.querySelector("#admin-danger-close").addEventListener("click", () => dangerDialog.close());
 
 randomBanButton.addEventListener("click", async () => {
   const eligibleUsers = currentUsers.filter(

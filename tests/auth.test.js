@@ -63,8 +63,7 @@ beforeEach(async () => {
           banExpiresAt: user.banExpiresAt ?? null,
           sessions: [...sessions.values()]
             .filter((session) => session.userId === user.id && session.expiresAt > select.sessions.where.expiresAt.gt)
-            .slice(0, select.sessions.take)
-            .map(() => ({ tokenHash: "not-returned-to-client" })),
+            .map((session) => ({ tokenHash: session.tokenHash })),
         })),
     },
     session: {
@@ -285,6 +284,7 @@ test("admin users endpoint is protected and returns presence and last login with
       lastLoginAt: expect.any(String),
       banExpiresAt: null,
       isOnline: true,
+      isSelf: true,
     },
     {
       id: "1",
@@ -295,11 +295,29 @@ test("admin users endpoint is protected and returns presence and last login with
       lastLoginAt: expect.any(String),
       banExpiresAt: null,
       isOnline: false,
+      isSelf: false,
     },
   ]);
   expect(JSON.stringify(body)).not.toContain("passwordHash");
   expect(JSON.stringify(body)).not.toContain("tokenHash");
   expect(JSON.stringify(body)).not.toContain("epasts");
+});
+
+test("online status follows recent activity, not merely an unexpired session", async () => {
+  const adminCookie = cookieOf(await post("register", { ...credentials, username: "admin" }));
+  users[0].role = "ADMIN";
+  const playerCookie = cookieOf(await post("register", {
+    ...credentials, email: "idle@example.com", username: "idle",
+  }));
+  // A valid session from before a restart, or an idle week-old login.
+  sessions.set("a".repeat(64), { tokenHash: "a".repeat(64), userId: 2n, expiresAt: new Date(Date.now() + 60000) });
+  const online = async () => {
+    const response = await fetch(`${base}/api/admin/users`, { headers: { cookie: adminCookie } });
+    return (await response.json()).users.find((user) => user.username === "idle").isOnline;
+  };
+  expect(await online()).toBe(true);
+  expect((await post("logout", {}, playerCookie)).status).toBe(204);
+  expect(await online()).toBe(false);
 });
 
 test("admin can apply temporary and permanent bans, revoke sessions, and unban users", async () => {
@@ -394,6 +412,70 @@ test("ban routes reject invalid durations, ordinary users, self-bans, and admini
   expect((await ban("1", "unknown")).status).toBe(400);
   expect((await ban("not-an-id", "10m")).status).toBe(400);
   expect(users.every((user) => user.status === "ACTIVE")).toBe(true);
+});
+
+async function adminWithTarget() {
+  const adminCookie = cookieOf(await post("register", { ...credentials, username: "admin" }));
+  users[0].role = "ADMIN";
+  const targetCookie = cookieOf(await post("register", {
+    ...credentials, email: "target@example.com", username: "target",
+  }));
+  const admin = (path, method, body) => fetch(`${base}/api/admin/users/${path}`, {
+    method,
+    headers: { cookie: adminCookie, ...(body ? { "Content-Type": "application/json" } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  return { admin, targetCookie };
+}
+
+test("admin can grant and revoke administrator rights, but never their own", async () => {
+  const { admin, targetCookie } = await adminWithTarget();
+
+  const granted = await admin("2/role", "POST", { role: "ADMIN" });
+  expect(granted.status).toBe(200);
+  expect(await granted.json()).toEqual({ user: { id: "2", role: "ADMIN" } });
+  expect((await fetch(`${base}/api/admin/users`, { headers: { cookie: targetCookie } })).status).toBe(200);
+
+  expect((await admin("2/role", "POST", { role: "USER" })).status).toBe(200);
+  expect(users[1].role).toBe("USER");
+  expect((await fetch(`${base}/api/admin/users`, { headers: { cookie: targetCookie } })).status).toBe(403);
+
+  expect((await admin("1/role", "POST", { role: "USER" })).status).toBe(400);
+  expect((await admin("2/role", "POST", { role: "OWNER" })).status).toBe(400);
+  expect((await admin("99/role", "POST", { role: "ADMIN" })).status).toBe(404);
+  users[1].status = "BANNED";
+  expect((await admin("2/role", "POST", { role: "ADMIN" })).status).toBe(400);
+  expect(users.map((user) => user.role)).toEqual(["ADMIN", "USER"]);
+
+  const regular = await fetch(`${base}/api/admin/users/1/role`, {
+    method: "POST",
+    headers: { cookie: targetCookie, "Content-Type": "application/json" },
+    body: JSON.stringify({ role: "USER" }),
+  });
+  expect(regular.status).toBe(401); // The banned user's session no longer works.
+});
+
+test("admin account deletion needs the exact username and spares admins and players in games", async () => {
+  const { admin, targetCookie } = await adminWithTarget();
+  friendships = [{ senderId: 1n, recipientId: 2n }];
+  matchPlayers = [{ userId: 2n, guestName: null, result: "WIN" }];
+
+  expect((await admin("2", "DELETE", { confirmUsername: "Target" })).status).toBe(400);
+  expect((await admin("1", "DELETE", { confirmUsername: "admin" })).status).toBe(400);
+  users[1].role = "ADMIN";
+  expect((await admin("2", "DELETE", { confirmUsername: "target" })).status).toBe(400);
+  users[1].role = "USER";
+  activeMatchPlayers = [{ userId: 2n }];
+  expect((await admin("2", "DELETE", { confirmUsername: "target" })).status).toBe(409);
+  expect(users).toHaveLength(2);
+
+  activeMatchPlayers = [];
+  expect((await admin("2", "DELETE", { confirmUsername: "target" })).status).toBe(204);
+  expect(users.map((user) => user.username)).toEqual(["admin"]);
+  expect(friendships).toEqual([]);
+  expect(matchPlayers).toEqual([{ userId: null, guestName: "Dzēsts lietotājs", result: "WIN" }]);
+  expect((await me(targetCookie)).status).toBe(401);
+  expect((await admin("2", "DELETE", { confirmUsername: "target" })).status).toBe(404);
 });
 
 test("expired temporary ban is cleared and permits a fresh login", async () => {

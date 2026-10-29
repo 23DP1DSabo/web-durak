@@ -14,11 +14,14 @@ import { createFriendsRouter } from "./router/friends.js";
 import { GameError } from "./lib/multiplayer.js";
 import { createMatchService } from "./lib/matches.js";
 import { allowedOrigins, isAllowedOrigin } from "./lib/origins.js";
+import { createInvites } from "./lib/invites.js";
+import { createPresence } from "./lib/presence.js";
 import { createRoomsRouter } from "./router/room.js";
 
 
 export function createAuthApp(prisma) {
   const authApp = express();
+  const presence = createPresence();
   const sessionDuration = 7 * 24 * 60 * 60 * 1000;
   const scryptAsync = promisify(scrypt);
   const banDurations = {
@@ -126,6 +129,7 @@ export function createAuthApp(prisma) {
       res.status(401).json({ error: "Jūs neesat pieslēdzies." });
       return null;
     }
+    presence.touch(session.tokenHash);
     return session.user;
   }
 
@@ -139,13 +143,15 @@ export function createAuthApp(prisma) {
     const previous = getSessionToken(req);
     if (previous) await db.session.deleteMany({ where: { tokenHash: hashToken(previous) } });
 
+    const tokenHash = hashToken(token);
     await db.session.create({
       data: {
-        tokenHash: hashToken(token),
+        tokenHash,
         userId,
         expiresAt: new Date(Date.now() + sessionDuration),
       },
     });
+    presence.touch(tokenHash);
 
     return token;
   }
@@ -173,6 +179,32 @@ export function createAuthApp(prisma) {
       && typeof password === "string"
       && password.length >= 8
       && password.length <= 128;
+  }
+
+  // Keeps match results, anonymized. Returns false while the user is still in a
+  // waiting room or an active game.
+  function deleteUserAccount(userId) {
+    return prisma.$transaction(async (db) => {
+      const activeMatch = await db.matchPlayer.findFirst({
+        where: {
+          userId,
+          match: { is: { status: { in: ["WAITING", "ACTIVE"] } } },
+        },
+        select: { id: true },
+      });
+      if (activeMatch) return false;
+
+      await db.friendship.deleteMany({
+        where: { OR: [{ senderId: userId }, { recipientId: userId }] },
+      });
+      await db.matchPlayer.updateMany({
+        where: { userId },
+        data: { userId: null, guestName: "Dzēsts lietotājs" },
+      });
+      await db.session.deleteMany({ where: { userId } });
+      await db.user.delete({ where: { id: userId } });
+      return true;
+    });
   }
 
   function parseUserId(value) {
@@ -286,6 +318,7 @@ export function createAuthApp(prisma) {
         return res.status(401).json({ error: "Jūs neesat pieslēdzies." });
       }
 
+      presence.touch(session.tokenHash);
       return res.json({ user: publicUser(session.user) });
     } catch (error) {
       console.error("Session lookup failed:", error);
@@ -330,29 +363,7 @@ export function createAuthApp(prisma) {
         return res.status(400).json({ error: "Pašreizējā parole nav pareiza." });
       }
 
-      const deleted = await prisma.$transaction(async (db) => {
-        const activeMatch = await db.matchPlayer.findFirst({
-          where: {
-            userId: user.id,
-            match: { is: { status: { in: ["WAITING", "ACTIVE"] } } },
-          },
-          select: { id: true },
-        });
-        if (activeMatch) return false;
-
-        await db.friendship.deleteMany({
-          where: { OR: [{ senderId: user.id }, { recipientId: user.id }] },
-        });
-        await db.matchPlayer.updateMany({
-          where: { userId: user.id },
-          data: { userId: null, guestName: "Dzēsts lietotājs" },
-        });
-        await db.session.deleteMany({ where: { userId: user.id } });
-        await db.user.delete({ where: { id: user.id } });
-        return true;
-      });
-
-      if (!deleted) {
+      if (!(await deleteUserAccount(user.id))) {
         return res.status(409).json({
           error: "Pirms konta dzēšanas izej no visām gaidošajām istabām un pabeidz aktīvās spēles.",
         });
@@ -449,13 +460,19 @@ export function createAuthApp(prisma) {
     }
   });
 
+  async function getAdmin(req, res) {
+    const user = await getAuthenticatedUser(req, res);
+    if (user && user.role !== "ADMIN") {
+      res.status(403).json({ error: "Šī darbība atļauta tikai administratoriem." });
+      return null;
+    }
+    return user;
+  }
+
   authApp.get("/api/admin/users", async (req, res) => {
     try {
-      const user = await getAuthenticatedUser(req, res);
+      const user = await getAdmin(req, res);
       if (!user) return;
-      if (user.role !== "ADMIN") {
-        return res.status(403).json({ error: "Šī darbība atļauta tikai administratoriem." });
-      }
 
       res.setHeader("Cache-Control", "no-store");
       const now = new Date();
@@ -476,7 +493,6 @@ export function createAuthApp(prisma) {
           sessions: {
             where: { expiresAt: { gt: now } },
             select: { tokenHash: true },
-            take: 1,
           },
         },
       });
@@ -485,7 +501,9 @@ export function createAuthApp(prisma) {
         users: users.map(({ sessions, ...listedUser }) => ({
           ...listedUser,
           id: String(listedUser.id),
-          isOnline: listedUser.status === "ACTIVE" && sessions.length > 0,
+          isOnline: listedUser.status === "ACTIVE"
+            && sessions.some((session) => presence.isOnline(session.tokenHash)),
+          isSelf: listedUser.id === user.id,
         })),
       });
     } catch (error) {
@@ -496,11 +514,8 @@ export function createAuthApp(prisma) {
 
   authApp.post("/api/admin/users/:userId/ban", async (req, res) => {
     try {
-      const admin = await getAuthenticatedUser(req, res);
+      const admin = await getAdmin(req, res);
       if (!admin) return;
-      if (admin.role !== "ADMIN") {
-        return res.status(403).json({ error: "Šī darbība atļauta tikai administratoriem." });
-      }
 
       const targetId = parseUserId(req.params.userId);
       const duration = req.body?.duration;
@@ -539,11 +554,8 @@ export function createAuthApp(prisma) {
 
   authApp.post("/api/admin/users/:userId/unban", async (req, res) => {
     try {
-      const admin = await getAuthenticatedUser(req, res);
+      const admin = await getAdmin(req, res);
       if (!admin) return;
-      if (admin.role !== "ADMIN") {
-        return res.status(403).json({ error: "Šī darbība atļauta tikai administratoriem." });
-      }
 
       const targetId = parseUserId(req.params.userId);
       if (targetId === null) {
@@ -568,6 +580,69 @@ export function createAuthApp(prisma) {
     }
   });
 
+  authApp.post("/api/admin/users/:userId/role", async (req, res) => {
+    try {
+      const admin = await getAdmin(req, res);
+      if (!admin) return;
+
+      const targetId = parseUserId(req.params.userId);
+      const role = req.body?.role;
+      if (targetId === null || !["USER", "ADMIN"].includes(role)) {
+        return res.status(400).json({ error: "Norādiet derīgu lietotāju un lomu." });
+      }
+      // Admins cannot demote themselves, so at least one admin always remains.
+      if (targetId === admin.id) {
+        return res.status(400).json({ error: "Savas tiesības mainīt nevar." });
+      }
+      const target = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!target) return res.status(404).json({ error: "Lietotājs nav atrasts." });
+      // Admin accounts cannot be unbanned, so a banned admin would stay locked out.
+      if (role === "ADMIN" && target.status !== "ACTIVE") {
+        return res.status(400).json({ error: "Vispirms atbloķē lietotāju." });
+      }
+
+      const updatedUser = await prisma.user.update({ where: { id: targetId }, data: { role } });
+      return res.json({ user: { id: String(updatedUser.id), role: updatedUser.role } });
+    } catch (error) {
+      console.error("Admin role change failed:", error);
+      return res.status(500).json({ error: "Neizdevās mainīt lietotāja tiesības." });
+    }
+  });
+
+  authApp.delete("/api/admin/users/:userId", async (req, res) => {
+    try {
+      const admin = await getAdmin(req, res);
+      if (!admin) return;
+
+      const targetId = parseUserId(req.params.userId);
+      if (targetId === null) {
+        return res.status(400).json({ error: "Norādiet derīgu lietotāju." });
+      }
+      if (targetId === admin.id) {
+        return res.status(400).json({ error: "Savu kontu dzēs profila lapā." });
+      }
+      const target = await prisma.user.findUnique({ where: { id: targetId } });
+      if (!target) return res.status(404).json({ error: "Lietotājs nav atrasts." });
+      if (target.role === "ADMIN") {
+        return res.status(400).json({ error: "Vispirms noņem administratora tiesības." });
+      }
+      // The typed username guards against deleting a different user than intended.
+      if (req.body?.confirmUsername !== target.username) {
+        return res.status(400).json({ error: "Apstiprinājumam ievadi precīzu lietotājvārdu." });
+      }
+
+      if (!(await deleteUserAccount(targetId))) {
+        return res.status(409).json({
+          error: "Lietotājs atrodas gaidošā istabā vai aktīvā spēlē. Mēģini vēlreiz pēc spēles beigām.",
+        });
+      }
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Admin account deletion failed:", error);
+      return res.status(500).json({ error: "Neizdevās dzēst kontu." });
+    }
+  });
+
   authApp.use(
     "/api/friends",
     createFriendsRouter(prisma, {
@@ -576,11 +651,13 @@ export function createAuthApp(prisma) {
     }),
   );
 
-  const matches = createMatchService(prisma);
+  const matches = createMatchService(prisma, { presence });
+  const invites = createInvites();
   authApp.locals.matches = matches;
+  authApp.locals.invites = invites;
   authApp.use(
     "/api/rooms",
-    createRoomsRouter(prisma, { service: matches })
+    createRoomsRouter(prisma, { service: matches, invites })
   );
 
 

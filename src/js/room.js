@@ -23,6 +23,10 @@ const statusElement = document.querySelector("#room-status");
 const roomCodeElement = document.querySelector("#room-code");
 const copyCodeButton = document.querySelector("#copy-room-code");
 const copyCodeStatus = document.querySelector("#copy-room-status");
+const inviteSection = document.querySelector("#invite-friends");
+const inviteList = document.querySelector("#invite-friend-list");
+const inviteEmpty = document.querySelector("#invite-friends-empty");
+const inviteStatus = document.querySelector("#invite-friends-status");
 
 let room = null;
 let playerName = "Viesis";
@@ -33,6 +37,8 @@ let redirected = false;
 let refreshing = false;
 let pendingSettings = {};
 let settingsRevision = 0;
+let friends = null;
+let invitingId = null;
 
 function hasPendingSettings() {
   return Object.keys(pendingSettings).length > 0;
@@ -150,6 +156,71 @@ async function loadPlayerName() {
   // with a second session lookup before the server performs the same check.
 }
 
+// Signed-in players can invite friends; guests get 401 and see no section.
+async function loadFriends() {
+  try {
+    friends = (await api("/api/friends")).friends;
+  } catch {
+    return;
+  }
+  renderInviteFriends();
+}
+
+function renderInviteFriends() {
+  if (!friends || !room) return;
+  inviteSection.hidden = room.status !== "waiting";
+  inviteEmpty.hidden = friends.length > 0;
+  const inRoom = new Set(
+    room.players.filter((player) => !player.isGuest).map((player) => player.name),
+  );
+  inviteList.replaceChildren();
+
+  for (const friend of friends) {
+    const item = document.createElement("li");
+    item.className = "player-list-item";
+    const avatar = document.createElement("span");
+    renderAvatar(avatar, friend);
+    const name = document.createElement("span");
+    name.textContent = friend.username;
+    name.title = friend.username;
+    const identity = document.createElement("span");
+    identity.className = "room-player-identity";
+    identity.append(avatar, name);
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "invite-friend-button";
+    const alreadyIn = inRoom.has(friend.username);
+    button.textContent = alreadyIn ? "Istabā" : "Ielūgt";
+    button.disabled = alreadyIn || room.players.length >= 6 || invitingId === friend.id;
+    button.setAttribute("aria-label", alreadyIn
+      ? `${friend.username} jau ir istabā`
+      : `Ielūgt ${friend.username}`);
+    button.addEventListener("click", () => inviteFriend(friend));
+    item.append(identity, button);
+    inviteList.append(item);
+  }
+}
+
+async function inviteFriend(friend) {
+  if (invitingId) return;
+  invitingId = friend.id;
+  renderInviteFriends();
+  inviteStatus.textContent = `Sūta ielūgumu: ${friend.username}…`;
+  try {
+    const data = await api(`/api/rooms/${encodeURIComponent(roomCode)}/invites`, {
+      method: "POST",
+      body: JSON.stringify({ friendId: friend.id }),
+    });
+    inviteStatus.textContent = data.message;
+  } catch (error) {
+    inviteStatus.textContent = error.message;
+  } finally {
+    invitingId = null;
+    renderInviteFriends();
+  }
+}
+
 function renderRoom() {
   if (!room || leaving) return;
   document.querySelector("#room-loading").hidden = true;
@@ -221,6 +292,7 @@ function renderRoom() {
   }
 
   renderSettings();
+  renderInviteFriends();
 
   if (room.status === "waiting") {
     beginButton.textContent =
@@ -587,3 +659,4 @@ copyCodeButton.addEventListener("click", copyRoomCode);
 
 renderSettings();
 initializeRoom().finally(() => { initializing = false; });
+void loadFriends();

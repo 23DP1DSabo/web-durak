@@ -25,7 +25,12 @@ if (existsSync(distPath)) {
 
 const port = Number(process.env.PORT ?? 3003);
 const httpServer = createServer(app);
-attachRealtime(httpServer, app.locals.matches);
+attachRealtime(httpServer, app.locals.matches, { invites: app.locals.invites });
+setInterval(() => {
+  app.locals.matches.sweepAbandoned().catch((error: Error & { code?: string }) =>
+    console.error("Abandoned room cleanup:", error.code || error.message),
+  );
+}, 60 * 1000).unref();
 httpServer.listen(port, "0.0.0.0", () => {
   console.log(`Server: http://localhost:${port}`);
 });

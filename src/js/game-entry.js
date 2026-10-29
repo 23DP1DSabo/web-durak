@@ -15,6 +15,10 @@ try {
     (await import("./multiplayer-table.js")).startTable();
   else if (data.room.status === "active") {
     const { createSoloConnection } = await import("./solo-connection.js");
+    // The server closes bot rooms that stop sending this for 10 minutes.
+    const heartbeat = setInterval(() => {
+      fetch(`/api/rooms/${code}`, { credentials: "same-origin" }).catch(() => {});
+    }, 60 * 1000);
     const connection = createSoloConnection(data.room, {
       onFinish: async () => {
         const response = await fetch(`/api/rooms/${code}/finish`, {
@@ -24,6 +28,7 @@ try {
           body: "{}",
         });
         if (!response.ok) throw new Error("Neizdevās saglabāt spēles beigas.");
+        clearInterval(heartbeat);
       },
     });
     (await import("./multiplayer-table.js")).startTable({ connection });

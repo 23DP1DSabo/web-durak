@@ -67,10 +67,17 @@
                             <span id="player-role" class="player-role">Tu</span>
                         </li>
                     </ul>
+                    <section id="invite-friends" class="invite-friends" aria-labelledby="invite-friends-heading" hidden>
+                        <h2 id="invite-friends-heading">Ielūgt draugu</h2>
+                        <ul id="invite-friend-list" class="player-list"></ul>
+                        <p id="invite-friends-empty" class="room-description" hidden>Tev vēl nav draugu.</p>
+                        <p id="invite-friends-status" class="room-setting-status" role="status" aria-live="polite"></p>
+                    </section>
                 </section>
             </div>
         </main>
         <script type="module" src="../js/room.js"></script>
+        <script type="module" src="../js/invites.js"></script>
         <script type="module" src="../js/theme.js"></script>
     </body>
 </html>

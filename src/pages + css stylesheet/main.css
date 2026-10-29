@@ -321,7 +321,8 @@ body {
 
 .admin-users-dialog {
     box-sizing: border-box;
-    width: min(100% - 32px, 980px);
+    /* Wide enough for every column without sideways scrolling on desktop. */
+    width: min(100% - 32px, 1320px);
     max-height: min(85vh, 760px);
     padding: clamp(18px, 3vw, 32px);
     border: 3px solid #2b190f;
@@ -576,6 +577,73 @@ body {
 .admin-users-dialog .admin-user-actions button:disabled {
     cursor: not-allowed;
     opacity: 0.65;
+}
+
+/* Role changes and account deletion. The ID selectors keep the warning colours
+   above every theme's generic dialog button styles. */
+#admin-users-list .admin-danger-button,
+#admin-danger-dialog .admin-danger-button {
+    border: 1px solid #d08a7d;
+    border-left: 5px solid #5e1a13;
+    color: #fff;
+    background: #8e342c;
+    background-image: none;
+    box-shadow: 2px 3px 0 rgb(40 8 4 / 40%);
+}
+
+#admin-users-list .admin-danger-button {
+    margin-left: auto;
+}
+
+#admin-users-list .admin-danger-button:hover,
+#admin-danger-dialog .admin-danger-button:hover:not(:disabled) {
+    background: #a14439;
+    filter: none;
+}
+
+#admin-danger-dialog .admin-danger-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+#admin-danger-dialog {
+    width: min(100% - 32px, 560px);
+    border-color: #8e342c;
+}
+
+.admin-danger-section {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #b96b60;
+    border-left-width: 5px;
+}
+
+.admin-danger-section h3,
+.admin-danger-section p {
+    margin: 0;
+}
+
+.admin-danger-section p {
+    line-height: 1.5;
+}
+
+#admin-delete-form {
+    display: grid;
+    gap: 8px;
+}
+
+#admin-delete-confirm {
+    box-sizing: border-box;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid #b96b60;
+    font: inherit;
+}
+
+#admin-danger-status:empty {
+    display: none;
 }
 
 #join-room-form {
@@ -3101,6 +3169,76 @@ body[data-theme="dark"] .room-dialog .room-code {
 .room-player-identity > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-list-item:has(.room-player-identity) .player-role { grid-column: 2; grid-row: 2; padding-left: 42px; }
 .player-list-item:has(.room-player-identity) .remove-player-button { grid-column: 3; grid-row: 1 / span 2; }
+
+/* Friend invitations: the list below the room's players. */
+.invite-friends { margin-top: 22px; }
+.invite-friends .player-list { max-height: 260px; overflow-y: auto; }
+.player-list-item:has(.room-player-identity) .invite-friend-button { grid-column: 3; grid-row: 1 / span 2; }
+.auth-page button.invite-friend-button { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+#invite-friends-status:empty { display: none; }
+
+/* Invitation notifications, shown at the top of every page but the game. */
+.invite-toasts {
+    position: fixed;
+    z-index: 1000;
+    top: 12px;
+    left: 50%;
+    display: grid;
+    gap: 10px;
+    width: min(100% - 32px, 460px);
+    transform: translateX(-50%);
+}
+
+.invite-toast {
+    display: grid;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 2px solid #e2bd70;
+    border-radius: 8px;
+    color: #f5efdc;
+    background: #1f3329;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 45%);
+    font: 15px/1.4 Georgia, "Palatino Linotype", serif;
+}
+
+.invite-toast-error {
+    border-color: #d08a7d;
+    background: #4a211b;
+}
+
+.invite-toast p {
+    margin: 0;
+}
+
+.invite-toast-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.invite-toasts .invite-toast button {
+    min-height: 38px;
+    padding: 7px 16px;
+    border: 1px solid #b4c4b7;
+    border-radius: 6px;
+    color: #f5efdc;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+    font: 700 14px Georgia, "Palatino Linotype", serif;
+    cursor: pointer;
+}
+
+.invite-toasts .invite-toast button.invite-toast-accept {
+    border-color: #e2bd70;
+    color: #1f2a24;
+    background: #e2bd70;
+}
+
+.invite-toasts .invite-toast button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
 
 /* ==========================================================================
    Game table sizing

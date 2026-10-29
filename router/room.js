@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createInvites } from "../lib/invites.js";
 import { createMultiplayer, GameError } from "../lib/multiplayer.js";
 import {
   createMatchService,
@@ -33,9 +34,12 @@ const playerData = (identity, name) => {
   };
 };
 
+const signedIn = (req) =>
+  req.identity.user ?? fail("Ielūgumi pieejami tikai pieslēgušies lietotājiem.", 401);
+
 export function createRoomsRouter(
   prisma,
-  { service = createMatchService(prisma) } = {},
+  { service = createMatchService(prisma), invites = createInvites() } = {},
 ) {
   const router = Router();
   router.use(async (req, res, next) => {
@@ -134,9 +138,36 @@ export function createRoomsRouter(
     if (!room) fail("Nav atrasta brīva istaba. Izveido jaunu istabu!", 404);
     send(res, await join(room.roomCode, req), req);
   });
-  route("get", "/:code", async (req, res) =>
-    send(res, await service.load(req.params.code.toUpperCase()), req),
-  );
+  route("post", "/invites/:id/accept", async (req, res) => {
+    const user = signedIn(req);
+    const invite = invites.take(req.params.id, user.id);
+    const memberships = await prisma.matchPlayer.findMany({
+      where: { userId: user.id, match: { is: { status: { in: ["WAITING", "ACTIVE"] } } } },
+      select: { match: { select: { roomCode: true, status: true } } },
+    });
+    if (memberships.some(({ match }) => match.status === "ACTIVE"))
+      fail("Vispirms pabeidz pašreizējo spēli.");
+    // Accepting moves the player, just like leaving their current lobby first.
+    for (const { match } of memberships) {
+      if (match.roomCode !== invite.roomCode) await service.leave(match.roomCode, req.identity);
+    }
+    const room = await join(invite.roomCode, { identity: req.identity, body: { name: user.username } })
+      .catch((error) => {
+        if (error.status === 404) fail("Istaba vairs nav pieejama.");
+        throw error;
+      });
+    send(res, room, req);
+  });
+  route("post", "/invites/:id/reject", async (req, res) => {
+    invites.reject(req.params.id, signedIn(req).id);
+    res.json({ message: "Ielūgums noraidīts." });
+  });
+  route("get", "/:code", async (req, res) => {
+    const room = await service.load(req.params.code.toUpperCase());
+    // The lobby polls this and bot games send a heartbeat; see sweepAbandoned.
+    if (member(room, req.identity)) service.markViewed(room.roomCode);
+    send(res, room, req);
+  });
   route("get", "/:code/access", async (req, res) => {
     const room = await service.load(req.params.code.toUpperCase());
     if (!member(room, req.identity)) {
@@ -150,6 +181,45 @@ export function createRoomsRouter(
   route("post", "/:code/join", async (req, res) =>
     send(res, await join(req.params.code.toUpperCase(), req), req),
   );
+  route("post", "/:code/invites", async (req, res) => {
+    const user = signedIn(req);
+    const friendId = /^[1-9]\d{0,18}$/.test(req.body.friendId ?? "")
+      ? BigInt(req.body.friendId)
+      : fail("Nederīgs drauga ID.", 400);
+    const room = await service.load(req.params.code.toUpperCase());
+    service.requireMember(room, req.identity);
+    waiting(room);
+    if (room.players.length >= 6) fail("Istaba ir pilna.");
+    if (room.players.some((p) => p.userId === friendId)) fail("Draugs jau ir šajā istabā.");
+    const friendship = await prisma.friendship.findFirst({
+      where: {
+        status: "ACCEPTED",
+        OR: [
+          { senderId: user.id, recipientId: friendId },
+          { senderId: friendId, recipientId: user.id },
+        ],
+      },
+      include: {
+        sender: { select: { username: true, status: true } },
+        recipient: { select: { username: true, status: true } },
+      },
+    });
+    if (!friendship) fail("Šis spēlētājs nav tavs draugs.", 404);
+    const friend = friendship.senderId === friendId ? friendship.sender : friendship.recipient;
+    if (friend.status !== "ACTIVE" || !invites.isConnected(friendId))
+      fail(`${friend.username} pašlaik nav tiešsaistē.`);
+    const playing = await prisma.matchPlayer.findFirst({
+      where: { userId: friendId, match: { is: { status: "ACTIVE" } } },
+      select: { id: true },
+    });
+    if (playing) fail(`${friend.username} pašlaik spēlē.`);
+    invites.create({
+      roomCode: room.roomCode, mode: room.mode,
+      fromUserId: user.id, fromName: user.username,
+      toUserId: friendId, toName: friend.username,
+    });
+    res.status(201).json({ message: `Ielūgums nosūtīts: ${friend.username}.` });
+  });
   route("patch", "/:code/settings", async (req, res) => {
     const room = await service.edit(req.params.code.toUpperCase(), (r) => {
       host(r, req.identity);
