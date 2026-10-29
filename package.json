@@ -17,7 +17,6 @@
   "scripts": {
     "dev": "vite",
     "server": "tsx server.ts",
-    "start": "npm run server",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "build": "vite build",
