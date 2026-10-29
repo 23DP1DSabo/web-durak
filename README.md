@@ -5,6 +5,8 @@
 3. Atsevišķos termināļos palaid `npm run server` un `npm run dev`.
 4. Atver `http://localhost:3000`, izvēlies “Pieslēgties” un izveido kontu.
 
+<!--publiskā saite: https://web-durak-production.up.railway.app-->
+
 Autentifikācija izmanto serverī glabātas 7 dienu sesijas un HttpOnly sīkdatni. Reģistrācija automātiski pieslēdz lietotāju; izrakstīšanās anulē pašreizējo sesiju. Viesu spēles ir pieejamas arī bez konta.
 
 Konta lapā pieslēdzies lietotājs var nomainīt lietotājvārdu un paroli, kā arī dzēst savu kontu, ievadot pašreizējo paroli. Dzēšot kontu, draudzības saites un sesijas tiek noņemtas, bet spēļu rezultāti tiek saglabāti anonimizēti; vispirms jāiziet no gaidošām istabām un jāpabeidz aktīvās spēles. Tēmu izvēle atrodas atsevišķā lapā “Tēmas”, kur pieejama klasiskā, gaišā un tumšā tēma.
